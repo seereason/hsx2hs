@@ -29,14 +29,18 @@ Description:            HSX (Haskell Source with XML) allows literal XML syntax 
 			
 Homepage:               http://code.google.com/hsp
 
-Build-Depends:          base>3, mtl
+Build-Depends:          base>3, mtl, haskell-src-exts
 Build-Type:             Simple
 Tested-With:            GHC==6.8.3
 
 Exposed-Modules:        HSX.XMLGenerator
+Other-Modules:		HSX.Transform
 
 GHC-Options:            -Wall
 Extensions:             MultiParamTypeClasses,
                         FunctionalDependencies,
                         OverlappingInstances,
                         UndecidableInstances
+
+Executable:             trhsx
+Main-Is:                Trhsx.hs
