@@ -34,7 +34,6 @@ Build-Type:             Simple
 Tested-With:            GHC==6.8.3
 
 Exposed-Modules:        HSX.XMLGenerator
-Other-Modules:		HSX.Transform
 
 GHC-Options:            -Wall
 Extensions:             MultiParamTypeClasses,
