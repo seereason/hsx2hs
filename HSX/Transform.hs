@@ -214,7 +214,7 @@ transformExp e = case e of
 		-- ... transform the children
 		cs' <- mapM transformChild cs
 		-- ... and lift the values into the XML datatype.
-		return $ paren $ metaMkTag name as mattr cs'
+		return $ paren $ metaGenElement name as mattr cs'
 
 	  where	-- | Transform expressions appearing in child position of an xml tag.
 		-- Expressions are first transformed, then wrapped in a call to
@@ -224,7 +224,7 @@ transformExp e = case e of
 			-- Transform the expression
 			te <- transformExp e
 			-- ... and apply the overloaded toXMLs to it
-			return $ metaToXmls te
+			return $ metaAsChild te
 		    
 	-- An empty xml tag should be transformed just as a standard tag,
 	-- only that there are no children,
@@ -234,10 +234,10 @@ transformExp e = case e of
 		let -- ... make tuples of the attributes   
 		    as = map mkAttr attrs
 		    -- ... and lift the values into the XML datatype.
-		return $ paren $ metaMkETag name as mattr
+		return $ paren $ metaGenEElement name as mattr
 	-- PCDATA should be lifted as a string into the XML datatype.
 	HsXPcdata pcdata	-> do setXmlTransformed
-				      return $ metaMkPcdata pcdata
+				      return $ strE pcdata
 	-- Escaped expressions should be treated as just expressions.
 	HsXExpTag e		-> do setXmlTransformed
 				      transformExp e
@@ -1716,35 +1716,38 @@ right_name = HsIdent "Right"
 ------------------------------------------------------------------------
 -- Help functions for meta programming xml
 
+{- No longer used.
 hsx_data_mod :: Module
 hsx_data_mod = Module "HSP.Data"
 
+-- Also no longer used, literal PCDATA should be considered a string.
 -- | Create an xml PCDATA value
 metaMkPcdata :: String -> HsExp
 metaMkPcdata s = metaFunction "pcdata" [strE s]
+-}
 
 -- | Create an xml tag, given its domain, name, attributes and
 -- children.
-metaMkTag :: HsXName -> [HsExp] -> Maybe HsExp -> [HsExp] -> HsExp
-metaMkTag name ats mat cs = 
+metaGenElement :: HsXName -> [HsExp] -> Maybe HsExp -> [HsExp] -> HsExp
+metaGenElement name ats mat cs = 
 	let (d,n) = xNameParts name
 	    ne    = tuple [metaMkMaybe $ fmap strE d, strE n]
-	    m = maybe id (\x y -> paren $ y `metaAppend` (metaMap $ metaToAttribute x)) mat
-	    attrs = m $ listE $ map metaToAttribute ats
-	 in metaFunction "genTag" [ne, attrs, listE cs]
+	    m = maybe id (\x y -> paren $ y `metaAppend` (metaMap $ metaAsAttr x)) mat
+	    attrs = m $ listE $ map metaAsAttr ats
+	 in metaFunction "genElement" [ne, attrs, listE cs]
 
 -- | Create an empty xml tag, given its domain, name and attributes.
-metaMkETag :: HsXName -> [HsExp] -> Maybe HsExp -> HsExp
-metaMkETag name ats mat = 
+metaGenEElement :: HsXName -> [HsExp] -> Maybe HsExp -> HsExp
+metaGenEElement name ats mat = 
 	let (d,n) = xNameParts name
 	    ne    = tuple [metaMkMaybe $ fmap strE d, strE n]
-	    m = maybe id (\x y -> paren $ y `metaAppend` (metaMap $ metaToAttribute x)) mat
-	    attrs = m $ listE $ map metaToAttribute ats
-	 in metaFunction "genETag" [ne, attrs]
+	    m = maybe id (\x y -> paren $ y `metaAppend` (metaMap $ metaAsAttr x)) mat
+	    attrs = m $ listE $ map metaAsAttr ats
+	 in metaFunction "genEElement" [ne, attrs]
 
--- | Create an attribute by applying the overloaded @toAttribute@
-metaToAttribute :: HsExp -> HsExp
-metaToAttribute e = metaFunction "toAttribute" [e]
+-- | Create an attribute by applying the overloaded @asAttr@
+metaAsAttr :: HsExp -> HsExp
+metaAsAttr e = metaFunction "asAttr" [e]
 
 -- | Create a property from an attribute and a value.
 metaAssign :: HsExp -> HsExp -> HsExp
@@ -1752,9 +1755,13 @@ metaAssign e1 e2 = infixApp e1 assignOp e2
   where assignOp = HsQVarOp $ UnQual $ HsSymbol ":="
 
 -- | Make xml out of some expression by applying the overloaded function
--- @toXml@.
-metaToXmls :: HsExp -> HsExp
-metaToXmls e = metaFunction "toXMLs" [paren e]
+-- @asChild@.
+metaAsChild :: HsExp -> HsExp
+metaAsChild e = metaFunction "asChild" [paren e]
+
+
+-- TODO: We need to fix the stuff below so pattern matching on XML could also be overloaded.
+-- Right now it only works on HSP XML, or anything that is syntactically identical to it.
 
 -- | Lookup an attribute in the set of attributes.
 metaExtract :: HsXName -> HsName -> HsExp
@@ -1768,11 +1775,11 @@ metaTag :: (Maybe String) -> String -> HsPat -> HsPat -> HsPat
 metaTag dom name ats cpat =
 	let d = metaPMkMaybe $ fmap strP dom
 	    n = pTuple [d, strP name]
-	 in metaConPat "Tag" [n, ats, cpat]
+	 in metaConPat "Element" [n, ats, cpat]
 	 
 -- | Generate a pattern under the PCDATA data constructor.
 metaPcdata :: String -> HsPat
-metaPcdata s = metaConPat "PCDATA" [strP s]
+metaPcdata s = metaConPat "CDATA" [strP s]
 
 metaMkName :: HsXName -> HsExp
 metaMkName n = case n of
