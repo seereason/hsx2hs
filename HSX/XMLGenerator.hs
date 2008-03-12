@@ -47,6 +47,9 @@ class EmbedAsChild a child where
 class EmbedAsAttr a attr where
  asAttr :: a -> attr
 
+data Attr n a = n := a
+  deriving (Show)
+
 
 -- literally lifted from the HList library
 class TypeCast   a b   | a -> b, b -> a      where typeCast   :: a -> b
