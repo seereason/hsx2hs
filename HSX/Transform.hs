@@ -118,16 +118,27 @@ transformDecl d = case d of
 	HsFunBind ms -> fmap HsFunBind $ mapM transformMatch ms
 	-- Instance declarations can contain regular patterns in the
 	-- declarations of functions inside it
-	HsInstDecl s c n ts decls ->
-		fmap (HsInstDecl s c n ts) $ mapM transformDecl decls
+	HsInstDecl s c n ts idecls ->
+		fmap (HsInstDecl s c n ts) $ mapM transformInstDecl idecls
 	-- Class declarations can contain regular patterns in the
 	-- declarations of automatically instantiated functions
-	HsClassDecl s c n ns ds decls ->
-		fmap (HsClassDecl s c n ns ds) $ mapM transformDecl decls
+	HsClassDecl s c n ns ds cdecls ->
+		fmap (HsClassDecl s c n ns ds) $ mapM transformClassDecl cdecls
 	-- Type signatures, type, newtype or data declarations, infix declarations
 	-- and default declarations; none can contain regular patterns
 	_ -> return d
-	
+
+transformInstDecl :: HsInstDecl -> HsxM HsInstDecl
+transformInstDecl d = case d of
+	HsInsDecl decl -> fmap HsInsDecl $ transformDecl decl
+	_ -> return d
+
+transformClassDecl :: HsClassDecl -> HsxM HsClassDecl
+transformClassDecl d = case d of
+	HsClsDecl decl -> fmap HsClsDecl $ transformDecl decl
+	_ -> return d
+
+
 
 -- | Transform a function "match" by generating pattern guards and
 -- declarations representing regular patterns in the argument list.
