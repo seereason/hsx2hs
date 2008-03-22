@@ -1,5 +1,5 @@
 Name:                   hsx
-Version:                0.3.2
+Version:                0.3.3
 License:                BSD3
 License-File:           LICENSE
 Author:                 Niklas Broberg, Joel Björnson
@@ -39,7 +39,10 @@ GHC-Options:            -Wall
 Extensions:             MultiParamTypeClasses,
                         FunctionalDependencies,
                         OverlappingInstances,
-                        UndecidableInstances
+                        UndecidableInstances,
+                        FlexibleInstances,
+                        GeneralizedNewtypeDeriving,
+                        TypeFamilies
 
 Executable:             trhsx
 Main-Is:                Trhsx.hs

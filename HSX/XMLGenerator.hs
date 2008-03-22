@@ -1,4 +1,3 @@
-{-# OPTIONS -fglasgow-exts #-}
 -----------------------------------------------------------------------------
 -- |
 -- Module      :  Control.Monad.XMLGenerator
@@ -22,30 +21,33 @@ import Control.Monad.Trans
 -- General XML Generation
 
 -- | The monad transformer that allows a monad to generate XML values.
-newtype XMLGenerator m a = XMLGenerator (m a)
+newtype XMLGenT m a = XMLGenT (m a)
   deriving (Monad, Functor, MonadIO)
 
 -- | un-lift.
-unXMLGenerator :: XMLGenerator m a -> m a
-unXMLGenerator (XMLGenerator ma) = ma
+unXMLGenT :: XMLGenT m a -> m a
+unXMLGenT   (XMLGenT ma) =  ma
 
-instance MonadTrans XMLGenerator where
- lift = XMLGenerator
+instance MonadTrans XMLGenT where
+ lift = XMLGenT
 
 -- | Generate XML values in some XMLGenerator monad.
-class GenerateXML m xml attr child | m -> xml attr child where
- genElement  :: (Maybe String, String) -> [attr] -> [child] -> XMLGenerator m xml
- genEElement :: (Maybe String, String) -> [attr]            -> XMLGenerator m xml
+class XMLGenerator m where
+ type XML m
+ type Child m
+ type Attribute m
+ genElement  :: (Maybe String, String) -> [Attribute m] -> [Child m] -> XMLGenT m (XML m)
+ genEElement :: (Maybe String, String) -> [Attribute m]              -> XMLGenT m (XML m)
  genEElement n ats = genElement n ats []
 
 -- | Embed values as child nodes of an XML element. The parent type will be clear
 -- from the context so it is not mentioned.
-class EmbedAsChild a child where
- asChild :: a -> child
+class EmbedAsChild a c where
+ asChild :: a -> c
 
 -- | Similarly embed values as attributes of an XML element.
-class EmbedAsAttr a attr where
- asAttr :: a -> attr
+class EmbedAsAttr a at where
+ asAttr :: a -> at
 
 data Attr n a = n := a
   deriving (Show)
