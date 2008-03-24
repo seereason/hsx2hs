@@ -31,13 +31,15 @@ unXMLGenT   (XMLGenT ma) =  ma
 instance MonadTrans XMLGenT where
  lift = XMLGenT
 
+type Name = (Maybe String, String)
+
 -- | Generate XML values in some XMLGenerator monad.
-class XMLGenerator m where
+class Monad m => XMLGenerator m where
  type XML m
  type Child m
  type Attribute m
- genElement  :: (Maybe String, String) -> [Attribute m] -> [Child m] -> XMLGenT m (XML m)
- genEElement :: (Maybe String, String) -> [Attribute m]              -> XMLGenT m (XML m)
+ genElement  :: Name -> [XMLGenT m (Attribute m)] -> [XMLGenT m [Child m]] -> XMLGenT m (XML m)
+ genEElement :: Name -> [XMLGenT m (Attribute m)]                          -> XMLGenT m (XML m)
  genEElement n ats = genElement n ats []
 
 -- | Embed values as child nodes of an XML element. The parent type will be clear
