@@ -16,6 +16,7 @@
 module HSX.XMLGenerator where
 
 import Control.Monad.Trans
+import Control.Monad (liftM)
 
 ----------------------------------------------
 -- General XML Generation
@@ -52,7 +53,50 @@ class EmbedAsAttr a at where
  asAttr :: a -> at
 
 data Attr n a = n := a
-  deriving (Show)
+  deriving Show
+
+
+-------------------------------------
+-- Setting attributes
+
+-- | Set attributes on XML elements
+class XMLGenerator m => SetAttr m t where
+ setAttr :: t ->  XMLGenT m (Attribute m)  -> XMLGenT m (XML m)
+ setAll  :: t -> [XMLGenT m [Attribute m]] -> XMLGenT m (XML m)
+ setAttr t v = setAll t [liftM return v]
+
+set :: (SetAttr m t, EmbedAsAttr a (XMLGenT m (Attribute m))) => t -> a -> XMLGenT m (XML m)
+set t v = setAttr t (asAttr v)
+-------------------------------------
+-- Appending children
+
+class XMLGenerator m => AppendChild m t where
+ appChild :: t ->  XMLGenT m (Child m)  -> XMLGenT m (XML m)
+ appAll   :: t -> [XMLGenT m [Child m]] -> XMLGenT m (XML m)
+ appChild t c = appAll t [liftM return c]
+
+app :: (AppendChild m t, EmbedAsChild c (XMLGenT m [Child m])) => t -> c -> XMLGenT m (XML m)
+app t c = appAll t [asChild c]
+
+-------------------------------------
+-- Names
+
+-- | Names can be simple or qualified with a domain. We want to conveniently
+-- use both simple strings or pairs wherever a Name is expected.
+class Show n => IsName n where
+ toName :: n -> Name
+
+-- | Names can represent names, of course.
+instance IsName Name where
+ toName = id
+
+-- | Strings can represent names, meaning a simple name with no domain.
+instance IsName String where
+ toName s = (Nothing, s)
+
+-- | Pairs of strings can represent names, meaning a name qualified with a domain.
+instance IsName (String, String) where
+ toName (ns, s) = (Just ns, s)
 
 
 -- literally lifted from the HList library
