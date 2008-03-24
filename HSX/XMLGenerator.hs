@@ -1,6 +1,6 @@
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Control.Monad.XMLGenerator
+-- Module      :  HSX.XMLGenerator
 -- Copyright   :  (c) Niklas Broberg 2008
 -- License     :  BSD-style (see the file LICENSE.txt)
 -- 
