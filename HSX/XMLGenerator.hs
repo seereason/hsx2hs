@@ -61,22 +61,28 @@ data Attr n a = n := a
 
 -- | Set attributes on XML elements
 class XMLGenerator m => SetAttr m t where
- setAttr :: t ->  XMLGenT m (Attribute m)  -> XMLGenT m (XML m)
- setAll  :: t -> [XMLGenT m [Attribute m]] -> XMLGenT m (XML m)
- setAttr t v = setAll t [liftM return v]
+ setAttr :: t -> XMLGenT m (Attribute m) -> XMLGenT m (XML m)
+ setAll  :: t -> XMLGenT m [Attribute m] -> XMLGenT m (XML m)
+ setAttr t v = setAll t $ liftM return v
 
-set :: (SetAttr m t, EmbedAsAttr a (XMLGenT m (Attribute m))) => t -> a -> XMLGenT m (XML m)
-set t v = setAttr t (asAttr v)
+(<@), set :: (SetAttr m t, EmbedAsAttr a (XMLGenT m (Attribute m))) => t -> a -> XMLGenT m (XML m)
+set xml at = setAttr xml (asAttr at)
+(<@) = set
+
+(<<@) :: (SetAttr m t, EmbedAsAttr a (XMLGenT m (Attribute m))) => t -> [a] -> XMLGenT m (XML m)
+xml <<@ ats = setAll xml (mapM asAttr ats)
+
 -------------------------------------
 -- Appending children
 
 class XMLGenerator m => AppendChild m t where
- appChild :: t ->  XMLGenT m (Child m)  -> XMLGenT m (XML m)
- appAll   :: t -> [XMLGenT m [Child m]] -> XMLGenT m (XML m)
- appChild t c = appAll t [liftM return c]
+ appChild :: t -> XMLGenT m (Child m) -> XMLGenT m (XML m)
+ appAll   :: t -> XMLGenT m [Child m] -> XMLGenT m (XML m)
+ appChild t c = appAll t $ liftM return c
 
-app :: (AppendChild m t, EmbedAsChild c (XMLGenT m [Child m])) => t -> c -> XMLGenT m (XML m)
-app t c = appAll t [asChild c]
+(<:), app :: (AppendChild m t, EmbedAsChild c (XMLGenT m [Child m])) => t -> c -> XMLGenT m (XML m)
+app t c = appAll t $ asChild c
+(<:) = app
 
 -------------------------------------
 -- Names
