@@ -33,7 +33,7 @@ Build-Depends:          base>3, mtl, haskell-src-exts>=0.3.2
 Build-Type:             Simple
 Tested-With:            GHC==6.8.3
 
-Exposed-Modules:        HSX.XMLGenerator, HSX.Layout
+Exposed-Modules:        HSX.XMLGenerator
 
 GHC-Options:            -Wall
 Extensions:             MultiParamTypeClasses,
