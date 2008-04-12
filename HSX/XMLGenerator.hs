@@ -35,22 +35,44 @@ instance MonadTrans XMLGenT where
 type Name = (Maybe String, String)
 
 -- | Generate XML values in some XMLGenerator monad.
-class Monad m => XMLGenerator m where
+class Monad m => XMLGen m where
  type XML m
  data Child m
  data Attribute m
  genElement  :: Name -> [XMLGenT m (Attribute m)] -> [XMLGenT m [Child m]] -> XMLGenT m (XML m)
  genEElement :: Name -> [XMLGenT m (Attribute m)]                          -> XMLGenT m (XML m)
  genEElement n ats = genElement n ats []
+ xmlToChild :: XML m -> Child m
+
+-- | Type synonyms to avoid writing out the XMLGenT all the time
+type GenXML m           = XMLGenT m (XML m)
+type GenXMLList m       = XMLGenT m [XML m]
+type GenChild m         = XMLGenT m (Child m)
+type GenChildList m     = XMLGenT m [Child m]
+type GenAttribute m     = XMLGenT m (Attribute m)
+type GenAttributeList m = XMLGenT m [Attribute m]
 
 -- | Embed values as child nodes of an XML element. The parent type will be clear
 -- from the context so it is not mentioned.
-class XMLGenerator m => EmbedAsChild m c where
- asChild :: c -> XMLGenT m [Child m]
+class XMLGen m => EmbedAsChild m c where
+ asChild :: c -> GenChildList m
 
 -- | Similarly embed values as attributes of an XML element.
-class XMLGenerator m => EmbedAsAttr m a where
- asAttr :: a -> XMLGenT m (Attribute m)
+class XMLGen m => EmbedAsAttr m a where
+ asAttr :: a -> GenAttribute m
+
+class (XMLGen m,
+       EmbedAsChild m (XML m),
+       EmbedAsChild m (Child m),
+       EmbedAsChild m (GenXML m),
+       EmbedAsChild m (GenXMLList m),
+       EmbedAsChild m (GenChild m),
+       EmbedAsChild m (GenChildList m),
+       SetAttr m (XML m),
+       SetAttr m (GenXML m),
+       AppendChild m (XML m),
+       AppendChild m (GenXML m)
+       ) => XMLGenerator m
 
 data Attr n a = n := a
   deriving Show
@@ -60,31 +82,31 @@ data Attr n a = n := a
 -- Setting attributes
 
 -- | Set attributes on XML elements
-class XMLGenerator m => SetAttr m elem where
- setAttr :: elem -> XMLGenT m (Attribute m) -> XMLGenT m (XML m)
- setAll  :: elem -> XMLGenT m [Attribute m] -> XMLGenT m (XML m)
+class XMLGen m => SetAttr m elem where
+ setAttr :: elem -> GenAttribute m     -> GenXML m
+ setAll  :: elem -> GenAttributeList m -> GenXML m
  setAttr e a = setAll e $ liftM return a
 
-(<@), set :: (SetAttr m elem, EmbedAsAttr m attr) => elem -> attr -> XMLGenT m (XML m)
+(<@), set :: (SetAttr m elem, EmbedAsAttr m attr) => elem -> attr -> GenXML m
 set xml attr = setAttr xml (asAttr attr)
 (<@) = set
 
-(<<@) :: (SetAttr m elem, EmbedAsAttr m a) => elem -> [a] -> XMLGenT m (XML m)
+(<<@) :: (SetAttr m elem, EmbedAsAttr m a) => elem -> [a] -> GenXML m
 xml <<@ ats = setAll xml (mapM asAttr ats)
 
 -------------------------------------
 -- Appending children
 
-class XMLGenerator m => AppendChild m elem where
- appChild :: elem -> XMLGenT m (Child m) -> XMLGenT m (XML m)
- appAll   :: elem -> XMLGenT m [Child m] -> XMLGenT m (XML m)
+class XMLGen m => AppendChild m elem where
+ appChild :: elem -> GenChild m     -> GenXML m
+ appAll   :: elem -> GenChildList m -> GenXML m
  appChild e c = appAll e $ liftM return c
 
-(<:), app :: (AppendChild m elem, EmbedAsChild m c) => elem -> c -> XMLGenT m (XML m)
+(<:), app :: (AppendChild m elem, EmbedAsChild m c) => elem -> c -> GenXML m
 app xml c = appAll xml $ asChild c
 (<:) = app
 
-(<<:) :: (AppendChild m elem, EmbedAsChild m c) => elem -> [c] -> XMLGenT m (XML m)
+(<<:) :: (AppendChild m elem, EmbedAsChild m c) => elem -> [c] -> GenXML m
 xml <<: chs = appAll xml (liftM concat $ mapM asChild chs)
 
 -------------------------------------
