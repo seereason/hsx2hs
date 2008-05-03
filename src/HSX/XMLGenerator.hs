@@ -76,6 +76,9 @@ instance XMLGen m => EmbedAsChild m (XML m) where
 class XMLGen m => EmbedAsAttr m a where
  asAttr :: a -> GenAttributeList m
 
+instance (XMLGen m, EmbedAsAttr m a) => EmbedAsAttr m (XMLGenT m a) where
+ asAttr ma = ma >>= asAttr
+
 instance XMLGen m => EmbedAsAttr m (Attribute m) where
  asAttr = return . return
 
@@ -85,17 +88,13 @@ instance EmbedAsAttr m a => EmbedAsAttr m [a] where
 
 class (XMLGen m,
        SetAttr m (XML m),
-       SetAttr m (GenXML m),
        AppendChild m (XML m),
-       AppendChild m (GenXML m),
        EmbedAsAttr m (String := String)
        ) => XMLGenerator m
 
 instance (XMLGen m,
        SetAttr m (XML m),
-       SetAttr m (GenXML m),
        AppendChild m (XML m),
-       AppendChild m (GenXML m),
        EmbedAsAttr m (String := String)
        ) => XMLGenerator m
 
@@ -119,6 +118,12 @@ set xml attr = setAll xml (asAttr attr)
 (<<@) :: (SetAttr m elem, EmbedAsAttr m a) => elem -> [a] -> GenXML m
 xml <<@ ats = setAll xml (liftM concat $ mapM asAttr ats)
 
+
+instance (TypeCastM m1 m, SetAttr m x) => 
+        SetAttr m (XMLGenT m1 x) where
+ setAll (XMLGenT m1x) ats = (XMLGenT $ typeCastM m1x) >>= (flip setAll) ats
+
+
 -------------------------------------
 -- Appending children
 
@@ -133,6 +138,10 @@ app xml c = appAll xml $ asChild c
 
 (<<:) :: (AppendChild m elem, EmbedAsChild m c) => elem -> [c] -> GenXML m
 xml <<: chs = appAll xml (liftM concat $ mapM asChild chs)
+
+instance (AppendChild m x, TypeCastM m1 m) =>
+        AppendChild m (XMLGenT m1 x) where
+ appAll (XMLGenT m1x) chs = (XMLGenT $ typeCastM m1x) >>= (flip appAll) chs
 
 -------------------------------------
 -- Names
