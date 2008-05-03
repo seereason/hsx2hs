@@ -89,16 +89,16 @@ instance EmbedAsAttr m a => EmbedAsAttr m [a] where
 class (XMLGen m,
        SetAttr m (XML m),
        AppendChild m (XML m),
-       EmbedAsAttr m (String := String)
+       EmbedAsAttr m (Attr String String)
        ) => XMLGenerator m
 
 instance (XMLGen m,
        SetAttr m (XML m),
        AppendChild m (XML m),
-       EmbedAsAttr m (String := String)
+       EmbedAsAttr m (Attr String String)
        ) => XMLGenerator m
 
-data n := a = n := a
+data Attr n a = n := a
   deriving Show
 
 
