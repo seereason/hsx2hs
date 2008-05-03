@@ -45,7 +45,8 @@ Extensions:             MultiParamTypeClasses,
                         GeneralizedNewtypeDeriving,
                         TypeFamilies,
                         TypeSynonymInstances,
-                        FlexibleContexts
+                        FlexibleContexts,
+                        TypeOperators
 
 Executable:             trhsx
 Main-Is:                Trhsx.hs

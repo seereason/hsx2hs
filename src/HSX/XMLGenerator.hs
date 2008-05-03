@@ -87,10 +87,19 @@ class (XMLGen m,
        SetAttr m (XML m),
        SetAttr m (GenXML m),
        AppendChild m (XML m),
-       AppendChild m (GenXML m)
+       AppendChild m (GenXML m),
+       EmbedAsAttr m (String := String)
        ) => XMLGenerator m
 
-data Attr n a = n := a
+instance (XMLGen m,
+       SetAttr m (XML m),
+       SetAttr m (GenXML m),
+       AppendChild m (XML m),
+       AppendChild m (GenXML m),
+       EmbedAsAttr m (String := String)
+       ) => XMLGenerator m
+
+data n := a = n := a
   deriving Show
 
 
