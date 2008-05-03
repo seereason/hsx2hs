@@ -155,6 +155,9 @@ instance IsName (String, String) where
  toName (ns, s) = (Just ns, s)
 
 
+---------------------------------------
+-- TypeCast, in lieu of ~ constraints
+
 -- literally lifted from the HList library
 class TypeCast   a b   | a -> b, b -> a      where typeCast   :: a -> b
 class TypeCast'  t a b | t a -> b, t b -> a  where typeCast'  :: t->a->b
@@ -162,3 +165,10 @@ class TypeCast'' t a b | t a -> b, t b -> a  where typeCast'' :: t->a->b
 instance TypeCast'  () a b => TypeCast a b   where typeCast x = typeCast' () x
 instance TypeCast'' t a b => TypeCast' t a b where typeCast' = typeCast''
 instance TypeCast'' () a a where typeCast'' _ x  = x
+
+class TypeCastM   ma mb   | ma -> mb, mb -> ma      where typeCastM   :: ma x -> mb x
+class TypeCastM'  t ma mb | t ma -> mb, t mb -> ma  where typeCastM'  :: t -> ma x -> mb x
+class TypeCastM'' t ma mb | t ma -> mb, t mb -> ma  where typeCastM'' :: t -> ma x -> mb x
+instance TypeCastM'  () ma mb => TypeCastM ma mb   where typeCastM mx = typeCastM' () mx
+instance TypeCastM'' t ma mb => TypeCastM' t ma mb where typeCastM' = typeCastM''
+instance TypeCastM'' () ma ma where typeCastM'' _ x  = x
