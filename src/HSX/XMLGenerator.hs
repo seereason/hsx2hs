@@ -57,6 +57,21 @@ type GenAttributeList m = XMLGenT m [Attribute m]
 class XMLGen m => EmbedAsChild m c where
  asChild :: c -> GenChildList m
 
+instance (EmbedAsChild m c, TypeCastM m1 m) => EmbedAsChild m (XMLGenT m1 c) where
+ asChild (XMLGenT m1a) = do
+            a <- XMLGenT $ typeCastM m1a
+            asChild a
+
+instance EmbedAsChild m c => EmbedAsChild m [c] where
+ asChild = liftM concat . mapM asChild
+
+instance XMLGen m => EmbedAsChild m (Child m) where
+ asChild = return . return
+
+instance XMLGen m => EmbedAsChild m (XML m) where
+ asChild = return . return . xmlToChild
+
+
 -- | Similarly embed values as attributes of an XML element.
 class XMLGen m => EmbedAsAttr m a where
  asAttr :: a -> GenAttributeList m
@@ -69,12 +84,6 @@ instance EmbedAsAttr m a => EmbedAsAttr m [a] where
 
 
 class (XMLGen m,
-       EmbedAsChild m (XML m),
-       EmbedAsChild m (Child m),
-       EmbedAsChild m (GenXML m),
-       EmbedAsChild m (GenXMLList m),
-       EmbedAsChild m (GenChild m),
-       EmbedAsChild m (GenChildList m),
        SetAttr m (XML m),
        SetAttr m (GenXML m),
        AppendChild m (XML m),
