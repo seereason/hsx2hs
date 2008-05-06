@@ -89,14 +89,26 @@ instance EmbedAsAttr m a => EmbedAsAttr m [a] where
 class (XMLGen m,
        SetAttr m (XML m),
        AppendChild m (XML m),
-       EmbedAsAttr m (Attr String String)
+       EmbedAsChild m String,
+       EmbedAsChild m Char, -- for overlap purposes
+       EmbedAsAttr m (Attr String String),
+       EmbedAsAttr m (Attr String Int),
+       EmbedAsAttr m (Attr String Bool)
        ) => XMLGenerator m
 
+{- 
+-- This is certainly true, but we want the various generators to explicitly state it,
+-- in order to get the error messages right.
 instance (XMLGen m,
        SetAttr m (XML m),
        AppendChild m (XML m),
-       EmbedAsAttr m (Attr String String)
+       EmbedAsChild m String,
+       EmbedAsChild m Char,
+       EmbedAsAttr m (Attr String String),
+       EmbedAsAttr m (Attr String Int),
+       EmbedAsAttr m (Attr String Bool)
        ) => XMLGenerator m
+-}
 
 data Attr n a = n := a
   deriving Show
