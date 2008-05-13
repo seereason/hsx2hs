@@ -901,6 +901,9 @@ trPattern s p = case p of
     HsPXPcdata st -> setHarpTransformedT >> (return $ metaPcdata st)
     -- XML comments are likewise just treated as strings.
     HsPXPatTag p -> setHarpTransformedT >> trPattern s p
+    -- Regular expression patterns over children should be translated
+    -- just like HsPRPat.
+    HsPXRPats rps -> trPattern s $ HsPRPat rps
 
     -- Transforming any other patterns simply means transforming
     -- their subparts.
