@@ -44,7 +44,7 @@ class Monad m => XMLGen m where
  genEElement n ats = genElement n ats []
  xmlToChild :: XML m -> Child m
 
--- | Type synonyms to avoid writing out the XMLGenT all the time
+-- | Type synonyms to avoid writing out the XMLnGenT all the time
 type GenXML m           = XMLGenT m (XML m)
 type GenXMLList m       = XMLGenT m [XML m]
 type GenChild m         = XMLGenT m (Child m)

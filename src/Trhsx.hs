@@ -1,7 +1,8 @@
 module Main where
 
 import Language.Haskell.Exts
-
+import Prelude hiding (readFile, writeFile)
+import System.IO.UTF8 (readFile, writeFile)
 import HSX.Transform
 
 import System.Environment (getArgs)
