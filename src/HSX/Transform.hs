@@ -227,7 +227,8 @@ transformExp e = case e of
         -- ... and lift the values into the XML datatype.
         return $ paren $ metaGenElement name as mattr cs'
 
-      where -- | Transform expressions appearing in child position of an xml tag.
+      where
+        -- | Transform expressions appearing in child position of an xml tag.
         -- Expressions are first transformed, then wrapped in a call to
         -- @toXml@.
         transformChild :: HsExp -> HsxM HsExp
@@ -1018,7 +1019,8 @@ trRPat s linear rp = case rp of
     -- that lifts that function into the matcher monad.
     HsRPPat p -> mkBaseDecl s linear p
   
-      where -- | Generate declarations for matching ordinary Haskell patterns
+      where
+        -- | Generate declarations for matching ordinary Haskell patterns
         mkBaseDecl :: SrcLoc -> Bool -> HsPat -> Tr MFunMetaInfo
         mkBaseDecl s linear p = case p of
             -- We can simplify a lot if the pattern is a wildcard or a variable
@@ -1152,7 +1154,8 @@ trRPat s linear rp = case rp of
         nvts <- mapM (trRPat s linear) rps
         mkSeqDecl s nvts
     
-      where -- | Generate a match function for a sequence of regular patterns,
+      where
+        -- | Generate a match function for a sequence of regular patterns,
         -- flattening any special sub-patterns into normal elements of the list
         mkSeqDecl :: SrcLoc -> [MFunMetaInfo] -> Tr MFunMetaInfo
         mkSeqDecl s nvts = do
@@ -1229,7 +1232,8 @@ trRPat s linear rp = case rp of
         -- The type of the value is unchanged.
         return (n, (v:vs), mt)
 
-      where -- | Generate a declaration for a @: binding.
+      where
+        -- | Generate a declaration for a \@: binding.
         mkCAsDecl :: SrcLoc -> MFunMetaInfo -> Tr HsName
         mkCAsDecl = asDecl $ app consFun    -- should become lists when applied to []
 
@@ -1252,7 +1256,8 @@ trRPat s linear rp = case rp of
                 _         -> fail $ "This should never ever ever happen...\
                           \ how the #% did you do it??!?"
 
-      where -- | Generate a declaration for a @ binding.
+      where
+        -- | Generate a declaration for a \@ binding.
         mkAsDecl :: SrcLoc -> MFunMetaInfo -> Tr HsName
         mkAsDecl = asDecl metaConst     -- should be constant when applied to []
 
@@ -1285,7 +1290,7 @@ trRPat s linear rp = case rp of
            nvt2 <- trRPat s False rp2
            -- ... and create a declaration that can choose between them.
            mkEitherDecl s nvt1 nvt2
-    -- | Generate declarations for either patterns, i.e. ( | )
+        -- Generate declarations for either patterns, i.e. ( | )
       where mkEitherDecl :: SrcLoc -> MFunMetaInfo -> MFunMetaInfo -> Tr MFunMetaInfo
             mkEitherDecl s nvt1@(_, vs1, t1) nvt2@(_, vs2, t2) = do
                 -- Eine namen, bitte!
