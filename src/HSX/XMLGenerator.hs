@@ -68,7 +68,11 @@ instance EmbedAsChild m c => EmbedAsChild m [c] where
 instance XMLGen m => EmbedAsChild m (Child m) where
  asChild = return . return
 
-instance XMLGen m => EmbedAsChild m (XML m) where
+#if __GLASGOW_HASKELL__ >= 610
+instance (XMLGen m,  XML m ~ x) => EmbedAsChild m x where
+#else
+instance (XMLGen m) => EmbedAsChild m (XML m) where
+#endif
  asChild = return . return . xmlToChild
 
 

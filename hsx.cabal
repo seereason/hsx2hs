@@ -46,7 +46,8 @@ Extensions:             MultiParamTypeClasses,
                         TypeFamilies,
                         TypeSynonymInstances,
                         FlexibleContexts,
-                        TypeOperators
+                        TypeOperators,
+                        CPP
 
 Executable:             trhsx
 Main-Is:                Trhsx.hs

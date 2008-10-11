@@ -397,8 +397,7 @@ transformLetDecls ds = do
                     let gs' = case gs of
                            []  -> []
                            [g] -> [mkDeclGuard g ws]
-                           _   -> error "This should not happen since we \ 
-                                   \ have called renameLetDecls already!"
+                           _   -> error "This should not happen since we have called renameLetDecls already!"
                         -- Generated attribute guards should also be added as declarations,
                         -- but with no where clauses.
                         ags' = map (flip mkDeclGuard $ []) ags
@@ -1253,8 +1252,7 @@ trRPat s linear rp = case rp of
         | otherwise -> case v of
                 HsIdent n -> fail $ "Attempting to bind variable "++n++
                       " inside the context of a numerable regular pattern"
-                _         -> fail $ "This should never ever ever happen...\
-                          \ how the #% did you do it??!?"
+                _         -> fail $ "This should never ever ever happen... how the #% did you do it??!?"
 
       where
         -- | Generate a declaration for a \@ binding.
