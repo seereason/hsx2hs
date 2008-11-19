@@ -51,7 +51,7 @@ process :: FilePath -> String -> String
 process fp fc = prettyPrintWithMode (defaultMode {linePragmas=True}) $
                  transform $ checkParse $ parse fp fc
 
-parse :: String -> String -> ParseResult HsModule
+parse :: String -> String -> ParseResult Module
 parse fn fc = parseModuleWithMode (ParseMode fn) fcuc
   where fcuc= unlines $ filter (not . isPrefixOf "#") $ lines fc
 
