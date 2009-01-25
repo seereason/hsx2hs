@@ -72,11 +72,11 @@ runHsxM (MkHsxM f) = f initHsxState
 -- | Transform away occurences of regular patterns from an abstract
 -- Haskell module, preserving semantics.
 transform :: Module -> Module
-transform (Module s m mes is decls) =
+transform (Module s m pragmas warn mes is decls) =
     let (decls', (harp, hsx)) = runHsxM $ mapM transformDecl decls
         -- We may need to add an import for Match.hs that defines the matcher monad
         imps1 = if harp 
-             then (:) $ ImportDecl s match_mod True
+             then (:) $ ImportDecl s match_mod True False
                             (Just match_qual_mod)
                             Nothing
              else id
@@ -85,7 +85,7 @@ transform (Module s m mes is decls) =
                          Nothing
                          Nothing
                  else -} id     -- we no longer want to import HSP.Data
-     in Module s m mes (imps1 $ imps2 is) decls'
+     in Module s m pragmas warn mes (imps1 $ imps2 is) decls'
 
 -----------------------------------------------------------------------------
 -- Declarations
@@ -96,7 +96,7 @@ transformDecl :: Decl -> HsxM Decl
 transformDecl d = case d of
     -- Pattern binds can contain regular patterns in the pattern being bound
     -- as well as on the right-hand side and in declarations in a where clause
-    PatBind srcloc pat rhs decls -> do
+    PatBind srcloc pat mty rhs decls -> do
         -- Preserve semantics of irrefutable regular patterns by postponing
         -- their evaluation to a let-expression on the right-hand side
         let ([pat'], rnpss) = unzip $ renameIrrPats [pat]
@@ -112,7 +112,7 @@ transformDecl d = case d of
                                return $ BDecls $ decls'' ++ ds'
                _           -> error "Cannot bind implicit parameters in the \
                         \ \'where\' clause of a function using regular patterns."
-        return $ PatBind srcloc pat'' rhs' decls'
+        return $ PatBind srcloc pat'' mty rhs' decls'
 
     -- Function binds can contain regular patterns in their matches
     FunBind ms -> fmap FunBind $ mapM transformMatch ms
@@ -145,7 +145,7 @@ transformClassDecl d = case d of
 -- Subterms, such as guards and the right-hand side, are also traversed
 -- transformed.
 transformMatch :: Match -> HsxM Match
-transformMatch (Match srcloc name pats rhs decls) = do
+transformMatch (Match srcloc name pats mty rhs decls) = do
     -- Preserve semantics of irrefutable regular patterns by postponing
     -- their evaluation to a let-expression on the right-hand side
     let (pats', rnpss) = unzip $ renameIrrPats pats
@@ -162,7 +162,7 @@ transformMatch (Match srcloc name pats rhs decls) = do
            _           -> error "Cannot bind implicit parameters in the \
                      \ \'where\' clause of a function using regular patterns."
 
-    return $ Match srcloc name pats'' rhs' decls'
+    return $ Match srcloc name pats'' mty rhs' decls'
 -- | Transform and update guards and right-hand side of a function or
 -- pattern binding. The supplied list of guards is prepended to the 
 -- original guards, and subterms are traversed and transformed.
@@ -371,7 +371,7 @@ transformLetDecls ds = do
         transformLDs k l ds = case ds of
             []     -> return []
             (d:ds) -> case d of
-                PatBind srcloc pat rhs decls -> do
+                PatBind srcloc pat mty rhs decls -> do
                     -- We need to transform all pattern bindings in a set of
                     -- declarations in the same context w.r.t. generating fresh
                     -- variable names, since they will all be in scope at the same time.
@@ -401,7 +401,7 @@ transformLetDecls ds = do
                     -- The generated guards, which should be at most one, should be
                     -- added as declarations rather than as guards due to the
                     -- scoping issue described above.
-                    return $ (PatBind srcloc pat' rhs' decls') : ags' ++ gs' ++ ds'
+                    return $ (PatBind srcloc pat' mty rhs' decls') : ags' ++ gs' ++ ds'
 
                     -- We only need to treat pattern binds separately, other declarations
                     -- can be transformed normally.
@@ -653,12 +653,12 @@ renameLetDecls ds =
   where renameLetDecl :: Decl -> RN (Decl, [(SrcLoc, Name, Pat)])
         renameLetDecl d = case d of
             -- We need only bother about pattern bindings.
-            PatBind srcloc pat rhs decls -> do
+            PatBind srcloc pat mty rhs decls -> do
                 -- Rename any regular patterns that appear in the
                 -- pattern being bound.
                 (p, ms) <- renameRP pat
                 let sms = map (\(n,p) -> (srcloc, n, p)) ms
-                return $ (PatBind srcloc p rhs decls, sms)
+                return $ (PatBind srcloc p mty rhs decls, sms)
             _ -> return (d, [])
 
 
