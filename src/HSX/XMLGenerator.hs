@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP, TypeFamilies, MultiParamTypeClasses, FunctionalDependencies, FlexibleContexts, FlexibleInstances, UndecidableInstances, TypeSynonymInstances, GeneralizedNewtypeDeriving #-}
 -----------------------------------------------------------------------------
 -- |
 -- Module      :  HSX.XMLGenerator
@@ -16,14 +17,14 @@
 module HSX.XMLGenerator where
 
 import Control.Monad.Trans
-import Control.Monad (liftM)
+import Control.Monad (MonadPlus(..),liftM)
 
 ----------------------------------------------
 -- General XML Generation
 
 -- | The monad transformer that allows a monad to generate XML values.
 newtype XMLGenT m a = XMLGenT (m a)
-  deriving (Monad, Functor, MonadIO)
+  deriving (Monad, Functor, MonadIO, MonadPlus)
 
 -- | un-lift.
 unXMLGenT :: XMLGenT m a -> m a
