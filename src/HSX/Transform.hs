@@ -3,12 +3,12 @@
 -- Module      :  HSX.Tranform
 -- Copyright   :  (c) Niklas Broberg 2004,
 -- License     :  BSD-style (see the file LICENSE.txt)
--- 
+--
 -- Maintainer  :  Niklas Broberg, d00nibro@dtek.chalmers.se
 -- Stability   :  experimental
 -- Portability :  portable
 --
--- Functions for transforming abstract Haskell code extended with regular 
+-- Functions for transforming abstract Haskell code extended with regular
 -- patterns into semantically equivalent normal abstract Haskell code. In
 -- other words, we transform away regular patterns.
 -----------------------------------------------------------------------------
@@ -53,7 +53,7 @@ initHsxState :: HsxState
 initHsxState = (False, False)
 
 setHarpTransformed :: HsxM ()
-setHarpTransformed = 
+setHarpTransformed =
     do (_,x) <- getHsxState
        setHsxState (True,x)
 
@@ -75,8 +75,8 @@ transform :: Module -> Module
 transform (Module s m pragmas warn mes is decls) =
     let (decls', (harp, hsx)) = runHsxM $ mapM transformDecl decls
         -- We may need to add an import for Match.hs that defines the matcher monad
-        imps1 = if harp 
-             then (:) $ ImportDecl s match_mod True False
+        imps1 = if harp
+             then (:) $ ImportDecl s match_mod True False Nothing
                             (Just match_qual_mod)
                             Nothing
              else id
@@ -104,7 +104,7 @@ transformDecl d = case d of
         ([pat''], attrGuards, guards, decls'') <- transformPatterns srcloc [pat']
         -- Transform the right-hand side, and add any generated guards
         -- and let expressions to it
-        rhs' <- mkRhs srcloc (attrGuards ++ guards) (concat rnpss) rhs 
+        rhs' <- mkRhs srcloc (attrGuards ++ guards) (concat rnpss) rhs
         -- Transform declarations in the where clause, adding any generated
         -- declarations to it
         decls' <- case decls of
@@ -164,7 +164,7 @@ transformMatch (Match srcloc name pats mty rhs decls) = do
 
     return $ Match srcloc name pats'' mty rhs' decls'
 -- | Transform and update guards and right-hand side of a function or
--- pattern binding. The supplied list of guards is prepended to the 
+-- pattern binding. The supplied list of guards is prepended to the
 -- original guards, and subterms are traversed and transformed.
 mkRhs :: SrcLoc -> [Guard] -> [(Name, Pat)] -> Rhs -> HsxM Rhs
 mkRhs srcloc guards rnps (UnGuardedRhs rhs) = do
@@ -172,7 +172,7 @@ mkRhs srcloc guards rnps (UnGuardedRhs rhs) = do
     -- them in a let-expression to make them lazily evaluated.
     -- Then transform the whole right-hand side as an expression.
     rhs' <- transformExp $ addLetDecls srcloc rnps rhs
-    case guards of 
+    case guards of
      -- There were no guards before, and none should be added,
      -- so we still have an unguarded right-hand side
      [] -> return $ UnGuardedRhs rhs'
@@ -195,7 +195,7 @@ mkRhs _ guards rnps (GuardedRhss gdrhss) = fmap GuardedRhss $ mapM (mkGRhs guard
 -- make them lazy, in order to make them behave as irrefutable patterns.
 addLetDecls :: SrcLoc -> [(Name, Pat)] -> Exp -> Exp
 addLetDecls s []   e = e    -- no declarations to add
-addLetDecls s rnps e = 
+addLetDecls s rnps e =
     -- Place all postponed patterns in the same let-expression
     letE (map (mkDecl s) rnps) e
 
@@ -205,7 +205,7 @@ mkDecl srcloc (n,p) = patBind srcloc p (var n)
 
 ------------------------------------------------------------------------------------
 -- Expressions
-                 
+
 -- | Transform expressions by traversing subterms.
 -- Of special interest are expressions that contain patterns as subterms,
 -- i.e. @let@, @case@ and lambda expressions, and also list comprehensions
@@ -215,7 +215,7 @@ mkDecl srcloc (n,p) = patBind srcloc p (var n)
 transformExp :: Exp -> HsxM Exp
 transformExp e = case e of
     -- A standard xml tag should be transformed into an element of the
-    -- XML datatype. Attributes should be made into a set of mappings, 
+    -- XML datatype. Attributes should be made into a set of mappings,
     -- and children should be transformed.
     XTag _ name attrs mattr cs -> do
         -- Hey Pluto, look, we have XML in our syntax tree!
@@ -237,13 +237,13 @@ transformExp e = case e of
             te <- transformExp e
             -- ... and apply the overloaded toXMLs to it
             return $ metaAsChild te
-            
+
     -- An empty xml tag should be transformed just as a standard tag,
     -- only that there are no children,
     XETag _ name attrs mattr -> do
         -- ... 'tis the season to be jolly, falalalalaaaa....
         setXmlTransformed
-        let -- ... make tuples of the attributes   
+        let -- ... make tuples of the attributes
             as = map mkAttr attrs
             -- ... and lift the values into the XML datatype.
         return $ paren $ metaGenEElement name as mattr
@@ -256,7 +256,7 @@ transformExp e = case e of
                         return $ paren $ metaAsChild e'
     -- Patterns as arguments to a lambda expression could be regular,
     -- but we cannot put the evaluation here since a lambda expression
-    -- can have neither guards nor a where clause. Thus we must postpone 
+    -- can have neither guards nor a where clause. Thus we must postpone
     -- them to a case expressions on the right-hand side.
     Lambda s pats rhs -> do
         let -- First rename regular patterns
@@ -270,7 +270,7 @@ transformExp e = case e of
             e = if null rns then rhs else caseE texp [alt1]
         rhs' <- transformExp e
         return $ Lambda s ps rhs'
-    -- A let expression can contain regular patterns in the declarations, 
+    -- A let expression can contain regular patterns in the declarations,
     -- or in the expression that makes up the body of the let.
     Let (BDecls ds) e -> do
         -- Declarations appearing in a let expression must be transformed
@@ -281,7 +281,7 @@ transformExp e = case e of
         return $ letE ds' e'
     -- Bindings of implicit parameters can appear either in ordinary let
     -- expressions (GHC), in dlet expressions (Hugs) or in a with clause
-    -- (both). Such bindings are transformed in a special way. The body 
+    -- (both). Such bindings are transformed in a special way. The body
     -- is transformed as a normal expression in all cases.
     Let (IPBinds is) e -> do
         is' <- mapM transformIPBind is
@@ -300,14 +300,36 @@ transformExp e = case e of
     MDo stmts -> do
         stmts' <- fmap concat $ mapM (transformStmt DoStmt) stmts
         return $ MDo stmts'
-    -- A list comprehension can contain regular patterns in the result 
+    -- A list comprehension can contain regular patterns in the result
     -- expression, or in any of its statements.
     ListComp e stmts  -> do
         e'     <- transformExp e
-        stmts' <- fmap concat $ mapM (transformStmt ListCompStmt) stmts
+        stmts' <- fmap concat $ mapM transformQualStmt stmts
         return $ ListComp e' stmts'
-    -- All other expressions simply transform their immediate subterms.
-    InfixApp e1 op e2 -> transform2exp e1 e2 
+    ParComp e stmtss  -> do
+        e'      <- transformExp e
+        stmtss' <- fmap (map concat) $ mapM (mapM transformQualStmt) stmtss
+        return $ ParComp e' stmtss'
+{-    Proc p e          -> do
+        -- Preserve semantics of irrefutable regular patterns by postponing
+        -- their evaluation to a let-expression on the right-hand side
+        let ([pat'], rnpss) = unzip $ renameIrrPats [pat]
+        -- Transform the pattern itself
+        ([pat''], attrGuards, guards, decls'') <- transformPatterns srcloc [pat']
+        -- Transform the right-hand side, and add any generated guards
+        -- and let expressions to it.
+        rhs' <- mkGAlts srcloc (attrGuards ++ guards) (concat rnpss) rhs
+        -- Transform declarations in the where clause, adding any generated
+        -- declarations to it.
+        decls' <- case decls of
+               BDecls ds -> do ds' <- mapM transformDecl ds
+                               return $ BDecls $ decls'' ++ ds
+               _           -> error "Cannot bind implicit parameters in the \
+                         \ \'where\' clause of a function using regular patterns."
+
+        return $ Alt srcloc pat'' rhs' decls' -}
+   -- All other expressions simply transform their immediate subterms.
+    InfixApp e1 op e2 -> transform2exp e1 e2
                                 (\e1 e2 -> InfixApp e1 op e2)
     App e1 e2         -> transform2exp e1 e2 App
     NegApp e          -> fmap NegApp $ transformExp e
@@ -328,35 +350,46 @@ transformExp e = case e of
     EnumFromThenTo e1 e2 e3 -> transform3exp e1 e2 e3 EnumFromThenTo
     ExpTypeSig s e t  -> do e' <- transformExp e
                             return $ ExpTypeSig s e' t
-    _           -> return e -- Warning! Does not work with TH bracketed expressions ([| ... |])
+    SpliceExp s       -> fmap SpliceExp $ transformSplice s
+    LeftArrApp e1 e2        -> transform2exp e1 e2 LeftArrApp
+    RightArrApp e1 e2       -> transform2exp e1 e2 RightArrApp
+    LeftArrHighApp e1 e2    -> transform2exp e1 e2 LeftArrHighApp
+    RightArrHighApp e1 e2   -> transform2exp e1 e2 RightArrHighApp
+    _           -> return e     -- Warning - will not work inside TH pattern splices!
 
-  where transformFieldUpdate :: FieldUpdate -> HsxM FieldUpdate
-        transformFieldUpdate (FieldUpdate n e) =
-                fmap (FieldUpdate n) $ transformExp e
-        
-        transform2exp :: Exp -> Exp -> (Exp -> Exp -> Exp) -> HsxM Exp
-        transform2exp e1 e2 f = do e1' <- transformExp e1
-                                   e2' <- transformExp e2
-                                   return $ f e1' e2'
-    
-        transform3exp :: Exp -> Exp -> Exp -> (Exp -> Exp -> Exp -> Exp) -> HsxM Exp
-        transform3exp e1 e2 e3 f = do e1' <- transformExp e1
-                                      e2' <- transformExp e2
-                                      e3' <- transformExp e3
-                                      return $ f e1' e2' e3'
+transformFieldUpdate :: FieldUpdate -> HsxM FieldUpdate
+transformFieldUpdate (FieldUpdate n e) =
+        fmap (FieldUpdate n) $ transformExp e
 
-        mkAttr :: XAttr -> Exp
-        mkAttr (XAttr name e) = 
-            paren (metaMkName name `metaAssign` e)
+transformSplice :: Splice -> HsxM Splice
+transformSplice s = case s of
+    ParenSplice e       -> fmap ParenSplice $ transformExp e
+    _                   -> return s
 
 
--- | Transform pattern bind declarations inside a @let@-expression by transforming 
+transform2exp :: Exp -> Exp -> (Exp -> Exp -> a) -> HsxM a
+transform2exp e1 e2 f = do e1' <- transformExp e1
+                           e2' <- transformExp e2
+                           return $ f e1' e2'
+
+transform3exp :: Exp -> Exp -> Exp -> (Exp -> Exp -> Exp -> a) -> HsxM a
+transform3exp e1 e2 e3 f = do e1' <- transformExp e1
+                              e2' <- transformExp e2
+                              e3' <- transformExp e3
+                              return $ f e1' e2' e3'
+
+mkAttr :: XAttr -> Exp
+mkAttr (XAttr name e) =
+    paren (metaMkName name `metaAssign` e)
+
+
+-- | Transform pattern bind declarations inside a @let@-expression by transforming
 -- subterms that could appear as regular patterns, as well as transforming the bound
 -- pattern itself. The reason we need to do this in a special way is scoping, i.e.
 -- in the expression @let a | Just b <- match a = list in b@ the variable b will not
 -- be in scope after the @in@. And besides, we would be on thin ice even if it was in
 -- scope since we are referring to the pattern being bound in the guard that will
--- decide if the pattern will be bound... yikes, why does Haskell allow guards on 
+-- decide if the pattern will be bound... yikes, why does Haskell allow guards on
 -- pattern binds to refer to the patterns being bound, could that ever lead to anything
 -- but an infinite loop??
 transformLetDecls :: [Decl] -> HsxM [Decl]
@@ -365,7 +398,7 @@ transformLetDecls ds = do
     -- separate the generated declaration sets. This since we need to add them not
     -- to the actual binding but rather to the declaration that will be the guard
     -- of the binding.
-    let ds' = renameLetDecls ds 
+    let ds' = renameLetDecls ds
     transformLDs 0 0 ds'
   where transformLDs :: Int -> Int -> [Decl] -> HsxM [Decl]
         transformLDs k l ds = case ds of
@@ -405,12 +438,12 @@ transformLetDecls ds = do
 
                     -- We only need to treat pattern binds separately, other declarations
                     -- can be transformed normally.
-                d -> do d'  <- transformDecl d 
+                d -> do d'  <- transformDecl d
                         ds' <- transformLDs k l ds
                         return $ d':ds'
 
 
--- | Transform binding of implicit parameters by transforming the expression on the 
+-- | Transform binding of implicit parameters by transforming the expression on the
 -- right-hand side. The left-hand side can only be an implicit parameter, so no
 -- regular patterns there...
 transformIPBind :: IPBind -> HsxM IPBind
@@ -424,7 +457,7 @@ transformIPBind (IPBind s n e) =
 data StmtType = DoStmt | GuardStmt | ListCompStmt
 
 -- | Transform statements by traversing and transforming subterms.
--- Since generator statements have slightly different semantics 
+-- Since generator statements have slightly different semantics
 -- depending on their context, statements are annotated with their
 -- context to ensure that the semantics of the resulting statement
 -- sequence is correct. The return type is a list since generated
@@ -466,12 +499,22 @@ transformStmt t s = case s of
     Qualifier e -> fmap (\e -> [Qualifier $ e]) $ transformExp e
     -- Let statements suffer from the same problem as let expressions, so
     -- the declarations should be treated in the same special way.
-    LetStmt (BDecls ds)  -> 
+    LetStmt (BDecls ds)  ->
         fmap (\ds -> [letStmt ds]) $ transformLetDecls ds
     -- If the bindings are of implicit parameters we simply transform them as such.
-    LetStmt (IPBinds is) -> 
+    LetStmt (IPBinds is) ->
         fmap (\is -> [LetStmt (IPBinds is)]) $ mapM transformIPBind is
 
+
+transformQualStmt :: QualStmt -> HsxM [QualStmt]
+transformQualStmt qs = case qs of
+    -- For qual statments in list comprehensions we just pass on the baton
+    QualStmt     s      -> fmap (map QualStmt) $ transformStmt ListCompStmt s
+    ThenTrans    e      -> fmap (return . ThenTrans) $ transformExp e
+    ThenBy       e f    -> fmap return $ transform2exp e f ThenBy
+    GroupBy      e      -> fmap (return . GroupBy) $ transformExp e
+    GroupUsing   f      -> fmap (return . GroupUsing) $ transformExp f
+    GroupByUsing e f    -> fmap return $ transform2exp e f GroupByUsing
 
 ------------------------------------------------------------------------------------------
 -- Case alternatives
@@ -497,9 +540,9 @@ transformAlt (Alt srcloc pat rhs decls) = do
                      \ \'where\' clause of a function using regular patterns."
 
     return $ Alt srcloc pat'' rhs' decls'
-    
+
     -- Transform and update guards and right-hand side of a case-expression.
-    -- The supplied list of guards is prepended to the original guards, and 
+    -- The supplied list of guards is prepended to the original guards, and
     -- subterms are traversed and transformed.
   where mkGAlts :: SrcLoc -> [Guard] -> [(Name, Pat)] -> GuardedAlts -> HsxM GuardedAlts
         mkGAlts s guards rnps (UnGuardedAlt rhs) = do
@@ -572,7 +615,7 @@ setRNState :: RNState -> RN ()
 setRNState s = RN $ \_ -> ((), s)
 
 genVarName :: RN Name
-genVarName = do 
+genVarName = do
     k <- getRNState
     setRNState $ k+1
     return $ name $ "harp_rnvar" ++ show k
@@ -590,7 +633,7 @@ rename2pat :: a -> a -> (b -> b -> c) -> (a -> RN (b, [d])) -> RN (c, [d])
 rename2pat p1 p2 f rn = do (q1, ms1) <- rn p1
                            (q2, ms2) <- rn p2
                            return $ (f q1 q2, ms1 ++ ms2)
-            
+
 renameNpat :: [a] -> ([b] -> c) -> (a -> RN (b, [d])) -> RN (c, [d])
 renameNpat ps f rn = do (qs, mss) <- fmap unzip $ mapM rn ps
                         return (f qs, concat mss)
@@ -624,15 +667,15 @@ renameRP p = case p of
     PAsPat n p        -> rename1pat p (PAsPat n) renameRP
     PIrrPat p         -> rename1pat p PIrrPat renameRP
     PXPatTag p        -> rename1pat p PXPatTag renameRP
-    PatTypeSig s p t  -> rename1pat p (\p -> PatTypeSig s p t) renameRP 
+    PatTypeSig s p t  -> rename1pat p (\p -> PatTypeSig s p t) renameRP
     _                   -> return (p, [])
 
   where renameRPf :: PatField -> RN (PatField, [NameBind])
         renameRPf (PFieldPat n p) = rename1pat p (PFieldPat n) renameRP
-    
+
         renameAttr :: PXAttr -> RN (PXAttr, [NameBind])
         renameAttr (PXAttr s p) = rename1pat p (PXAttr s) renameRP
-    
+
         rename :: Pat -> RN (Pat, [NameBind])
         rename p = do -- Generate a fresh variable
               n <- genVarName
@@ -642,7 +685,7 @@ renameRP p = case p of
 
 -- | Rename declarations appearing in @let@s or @where@ clauses.
 renameLetDecls :: [Decl] -> [Decl]
-renameLetDecls ds = 
+renameLetDecls ds =
     let -- Rename all regular patterns bound in pattern bindings.
         (ds', smss) = unzip $ runRename $ mapM renameLetDecl ds
         -- ... and then generate declarations for the associations
@@ -685,7 +728,7 @@ renameIrrP p = case p of
     PParen p          -> rename1pat p PParen renameIrrP
     PRec n pfs        -> renameNpat pfs (PRec n) renameIrrPf
     PAsPat n p        -> rename1pat p (PAsPat n) renameIrrP
-    PatTypeSig s p t  -> rename1pat p (\p -> PatTypeSig s p t) renameIrrP   
+    PatTypeSig s p t  -> rename1pat p (\p -> PatTypeSig s p t) renameIrrP
 
     -- Hsx
     PXTag s n attrs mat ps -> do (attrs', nss) <- fmap unzip $ mapM renameIrrAttr attrs
@@ -705,10 +748,10 @@ renameIrrP p = case p of
     -- End Hsx
 
     _                       -> return (p, [])
-    
+
   where renameIrrPf :: PatField -> RN (PatField, [NameBind])
         renameIrrPf (PFieldPat n p) = rename1pat p (PFieldPat n) renameIrrP
-    
+
         renameIrrAttr :: PXAttr -> RN (PXAttr, [NameBind])
         renameIrrAttr (PXAttr s p) = rename1pat p (PXAttr s) renameIrrP
 -----------------------------------------------------------------------------------
@@ -770,7 +813,7 @@ updateState f = do s <- getState
 -- specific state manipulating functions
 pushGuard :: SrcLoc -> Pat -> Exp -> Tr ()
 pushGuard s p e = updateState $ \(n,m,a,gs1,gs2,ds) -> ((),(n,m,a,gs1,(s,p,e):gs2,ds))
-         
+
 pushDecl :: Decl -> Tr ()
 pushDecl d = updateState $ \(n,m,a,gs1,gs2,ds) -> ((),(n,m,a,gs1,gs2,d:ds))
 
@@ -821,7 +864,7 @@ trPatterns :: SrcLoc -> [Pat] -> Tr [Pat]
 trPatterns s = mapM (trPattern s)
 
 -- | Transform a pattern by traversing the syntax tree.
--- A regular pattern is translated, other patterns are 
+-- A regular pattern is translated, other patterns are
 -- simply left as is.
 trPattern :: SrcLoc -> Pat -> Tr Pat
 trPattern s p = case p of
@@ -829,14 +872,14 @@ trPattern s p = case p of
     -- Regular patterns must be transformed of course.
     PRPat rps -> do
         -- First we need a name for the placeholder pattern.
-        n <- genPatName 
+        n <- genPatName
         -- A top-level regular pattern is a sequence in linear
         -- context, so we can simply translate it as if it was one.
         (mname, vars, _) <- trRPat s True (RPSeq rps)
         -- Generate a top level declaration.
         topmname <- mkTopDecl s mname vars
         -- Generate a pattern guard for this regular pattern,
-        -- that will match the generated declaration to the 
+        -- that will match the generated declaration to the
         -- value of the placeholder, and bind all variables.
         mkGuard s vars topmname n
         -- And indeed, we have made a transformation!
@@ -868,7 +911,7 @@ trPattern s p = case p of
         setHarpTransformedT
         -- ... and we return a Tag pattern.
         let (dom, n) = xNameParts name
-        return $ metaTag dom n an cpat' 
+        return $ metaTag dom n an cpat'
     -- ... as should empty Tag patterns
     PXETag s name attrs mattr -> do
         -- We need a name for the attribute list, if there are lookups
@@ -912,12 +955,15 @@ trPattern s p = case p of
     PWildCard          -> return p
     PIrrPat p          -> tr1pat p PIrrPat (trPattern s)
     PatTypeSig s p t   -> tr1pat p (\p -> PatTypeSig s p t) (trPattern s)
+    PExplTypeArg _ _   -> return p
+    PQuasiQuote _ _    -> return p
+    PBangPat p         -> tr1pat p PBangPat (trPattern s)
 
   where -- Transform a pattern field.
     trPatternField :: SrcLoc -> PatField -> Tr PatField
-    trPatternField s (PFieldPat n p) = 
+    trPatternField s (PFieldPat n p) =
         tr1pat p (PFieldPat n) (trPattern s)
- 
+
     -- Deconstruct an xml tag name into its parts.
     xNameParts :: XName -> (Maybe String, String)
     xNameParts n = case n of
@@ -951,13 +997,13 @@ trPattern s p = case p of
         pushAttrGuard s (pTuple [pat, pvar newAttrs]) rhs
         -- ... and finally recurse
         mkAttrGuards s newAttrs xs mattr
-            
-    -- | Generate a declaration at top level that will finalise all 
+
+    -- | Generate a declaration at top level that will finalise all
     -- variable continuations, and then return all bound variables.
     mkTopDecl :: SrcLoc -> Name -> [Name] -> Tr Name
-    mkTopDecl s mname vars = 
+    mkTopDecl s mname vars =
         do -- Give the match function a name
-           n <- genMatchName 
+           n <- genMatchName
            -- Create the declaration and add it to the store.
            pushDecl $ topDecl s n mname vars
            -- Return the name of the match function so that the
@@ -965,7 +1011,7 @@ trPattern s p = case p of
            return n
 
     topDecl :: SrcLoc -> Name -> Name -> [Name] -> Decl
-    topDecl s n mname vs = 
+    topDecl s n mname vs =
         let pat  = pTuple [wildcard, pvarTuple vs]      -- (_, (foo, bar, ...))
             g    = var mname                            -- harp_matchX
             a    = genStmt s pat g                      -- (_, (foo, ...)) <- harp_matchX
@@ -1009,7 +1055,7 @@ trRPat s linear rp = case rp of
     -- base match function for the pattern, and a declaration
     -- that lifts that function into the matcher monad.
     RPPat p -> mkBaseDecl s linear p
-  
+
       where
         -- | Generate declarations for matching ordinary Haskell patterns
         mkBaseDecl :: SrcLoc -> Bool -> Pat -> Tr MFunMetaInfo
@@ -1022,28 +1068,28 @@ trRPat s linear rp = case rp of
 
             -- ... otherwise we'll have to take the long way...
             p           -> do -- First do a case match on a single element
-                              (name, vars, _) <- mkBasePat s linear p   
-                              -- ... apply baseMatch to the case matcher to 
+                              (name, vars, _) <- mkBasePat s linear p
+                              -- ... apply baseMatch to the case matcher to
                               -- lift it into the matcher monad.
-                              newname <- mkBaseMatch s name 
+                              newname <- mkBaseMatch s name
                               -- ... and return the meta-info gathered.
                               return (newname, vars, S)
 
-        -- | Generate a basic function that cases on a single element, 
+        -- | Generate a basic function that cases on a single element,
         -- returning Just (all bound variables) on a match, and
         -- Nothing on a mismatch.
         mkBasePat :: SrcLoc -> Bool -> Pat -> Tr MFunMetaInfo
-        mkBasePat s b p = 
+        mkBasePat s b p =
          do -- First we need a name...
            n <- genMatchName
-           -- ... and then we need to know what variables that 
+           -- ... and then we need to know what variables that
            -- will be bound by this match.
            let vs = gatherPVars p
            -- ... and then we can create and store away a casing function.
            basePatDecl s b n vs p >>= pushDecl
            return (n, vs, S)
 
-        -- | Generate a basic casing function for a given pattern.   
+        -- | Generate a basic casing function for a given pattern.
         basePatDecl :: SrcLoc -> Bool -> Name -> [Name] -> Pat -> Tr Decl
         basePatDecl s linear f vs p = do
          -- We can use the magic variable harp_a since nothing else needs to
@@ -1056,10 +1102,10 @@ trRPat s linear rp = case rp of
          return $ simpleFun s f a rhs
            where baseCaseE :: SrcLoc -> Bool -> Pat -> Name -> [Name] -> Tr Exp
                  baseCaseE s b p a vs = do
-                    -- First the alternative if we actually 
+                    -- First the alternative if we actually
                     -- match the given pattern
                     let alt1 = alt s p                  -- foo -> Just (mf foo)
-                                (app (var just_name) $ 
+                                (app (var just_name) $
                                  tuple (map (retVar b) vs))
                         -- .. and finally an alternative for not matching the pattern.
                         alt2 = alt s wildcard (var nothing_name)        -- _ -> Nothing
@@ -1085,28 +1131,28 @@ trRPat s linear rp = case rp of
 
                 -- ... otherwise we'll want to make a base pattern
                 p           -> do -- First do a case match on a single element
-                      (name, vars, _) <- mkGuardPat s linear p gs   
-                      -- ... apply baseMatch to the case matcher to 
+                      (name, vars, _) <- mkGuardPat s linear p gs
+                      -- ... apply baseMatch to the case matcher to
                       -- lift it into the matcher monad.
-                      newname <- mkBaseMatch s name 
+                      newname <- mkBaseMatch s name
                       -- ... and return the meta-info gathered.
                       return (newname, vars, S)
 
-           -- | Generate a basic function that cases on a single element, 
+           -- | Generate a basic function that cases on a single element,
            -- returning Just (all bound variables) on a match, and
            -- Nothing on a mismatch.
            mkGuardPat :: SrcLoc -> Bool -> Pat -> [Stmt] -> Tr MFunMetaInfo
-           mkGuardPat s b p gs = 
+           mkGuardPat s b p gs =
                 do -- First we need a name...
                    n <- genMatchName
-                   -- ... and then we need to know what variables that 
+                   -- ... and then we need to know what variables that
                    -- will be bound by this match.
                    let vs = gatherPVars p ++ concatMap gatherStmtVars gs
                    -- ... and then we can create and store away a casing function.
                    guardPatDecl s b n vs p gs >>= pushDecl
                    return (n, vs, S)
 
-           -- | Generate a basic casing function for a given pattern.   
+           -- | Generate a basic casing function for a given pattern.
            guardPatDecl :: SrcLoc -> Bool -> Name -> [Name] -> Pat -> [Stmt] -> Tr Decl
            guardPatDecl s linear f vs p gs = do
                 -- We can use the magic variable harp_a since nothing else needs to
@@ -1119,10 +1165,10 @@ trRPat s linear rp = case rp of
                 return $ simpleFun s f a rhs
               where guardedCaseE :: SrcLoc -> Bool -> Pat -> [Stmt] -> Name -> [Name] -> Tr Exp
                     guardedCaseE s b p gs a vs = do
-                        -- First the alternative if we actually 
+                        -- First the alternative if we actually
                         -- match the given pattern
                         let alt1 = altGW s p gs                 -- foo -> Just (mf foo)
-                                    (app (var just_name) $ 
+                                    (app (var just_name) $
                                      tuple (map (retVar b) vs)) noBinds
                             -- .. and finally an alternative for not matching the pattern.
                             alt2 = alt s wildcard (var nothing_name)        -- _ -> Nothing
@@ -1141,10 +1187,10 @@ trRPat s linear rp = case rp of
 
     -- For a sequence of regular patterns, we should transform all
     -- sub-patterns and then generate a function for sequencing them.
-    RPSeq rps -> do 
+    RPSeq rps -> do
         nvts <- mapM (trRPat s linear) rps
         mkSeqDecl s nvts
-    
+
       where
         -- | Generate a match function for a sequence of regular patterns,
         -- flattening any special sub-patterns into normal elements of the list
@@ -1175,17 +1221,17 @@ trRPat s linear rp = case rp of
 
         -- | Flatten values of all sub-patterns into normal elements of the list
         flattenVals :: SrcLoc -> [(Name, MType)] -> [Decl]
-        flattenVals s nts = 
-            let -- Flatten the values of all sub-patterns to 
+        flattenVals s nts =
+            let -- Flatten the values of all sub-patterns to
                 -- lists of elements
                 (nns, ds) = unzip $ map (flVal s) nts
                 -- ... and concatenate their results.
                 ret       = nameBind s retname $ app
-                              (paren $ app foldCompFun 
+                              (paren $ app foldCompFun
                                 (listE $ map var nns)) $ eList
              in ds ++ [ret]
-    
-    
+
+
         flVal :: SrcLoc -> (Name, MType) -> (Name, Decl)
         flVal s (name, mt) =
             let -- We reuse the old names, we just extend them a bit.
@@ -1200,22 +1246,22 @@ trRPat s linear rp = case rp of
         -- | Generate a flattening function for a given type structure.
         flatten :: MType -> Exp
         flatten S = consFun                         -- (:)
-        flatten (L mt) = 
+        flatten (L mt) =
             let f = flatten mt
                 r = paren $ metaMap f
              in paren $ foldCompFun `metaComp` r    -- (foldComp . (map $flatten))
-        flatten (E mt1 mt2) = 
+        flatten (E mt1 mt2) =
             let f1 = flatten mt1
                 f2 = flatten mt2
              in paren $ metaEither f1 f2            -- (either $flatten $flatten)
-        flatten (M mt) = 
+        flatten (M mt) =
             let f = flatten mt
              in paren $ metaMaybe idFun f           -- (maybe id $flatten)
 
-    -- For accumulating as-patterns we should transform the subpattern, and then generate 
+    -- For accumulating as-patterns we should transform the subpattern, and then generate
     -- a declaration that supplies the value to be bound to the variable in question.
     -- The variable should be bound non-linearly.
-    RPCAs v rp -> do 
+    RPCAs v rp -> do
         -- Transform the subpattern
         nvt@(name, vs, mt) <- trRPat s linear rp
         -- ... and create a declaration to bind its value.
@@ -1229,11 +1275,11 @@ trRPat s linear rp = case rp of
         mkCAsDecl = asDecl $ app consFun    -- should become lists when applied to []
 
 
-    -- For ordinary as-patterns we should transform the subpattern, and then generate 
+    -- For ordinary as-patterns we should transform the subpattern, and then generate
     -- a declaration that supplies the value to be bound to the variable in question.
     -- The variable should be bound linearly.
-    RPAs v rp 
-        | linear -> 
+    RPAs v rp
+        | linear ->
              do -- Transform the subpattern
                 nvt@(name, vs, mt) <- trRPat s linear rp
                 -- ... and create a declaration to bind its value
@@ -1255,17 +1301,17 @@ trRPat s linear rp = case rp of
     -- For regular patterns, parentheses have no real meaning
     -- so at this point we can just skip them.
     RPParen rp -> trRPat s linear rp
-    
+
     -- For (possibly non-greedy) optional regular patterns we need to
     -- transform the subpattern, and the generate a function that can
     -- choose to match or not to match, that is the question...
-    RPOp rp RPOpt-> 
+    RPOp rp RPOpt->
         do -- Transform the subpattern
            nvt <- trRPat s False rp
            -- ... and create a declaration that can optionally match it.
            mkOptDecl s False nvt
     -- ... similarly for the non-greedy version.
-    RPOp rp RPOptG -> 
+    RPOp rp RPOptG ->
         do -- Transform the subpattern
            nvt <- trRPat s False rp
            -- ... and create a declaration that can optionally match it.
@@ -1274,7 +1320,7 @@ trRPat s linear rp = case rp of
 
     -- For union patterns, we should transform both subexpressions,
     -- and generate a function that chooses between them.
-    RPEither rp1 rp2 -> 
+    RPEither rp1 rp2 ->
         do -- Transform the subpatterns
            nvt1 <- trRPat s False rp1
            nvt2 <- trRPat s False rp2
@@ -1293,7 +1339,7 @@ trRPat s linear rp = case rp of
                     -- ... some may be bound on both sides, so we
                     -- need to check which ones are bound on each,
                     -- supplying empty value for those that are not
-                    vals1 = map (varOrId vs1) allvs     
+                    vals1 = map (varOrId vs1) allvs
                     vals2 = map (varOrId vs2) allvs
                     -- ... apply either Left or Right to the returned value
                     ret1  = metaReturn $ tuple          -- return (Left harp_val1, (foo, id, ...))
@@ -1306,7 +1352,7 @@ trRPat s linear rp = case rp of
                     exp1  = doE [g1, qualStmt ret1]
                     exp2  = doE [g2, qualStmt ret2]
                     -- ... and choose between them using the choice (+++) operator.
-                    rhs   = (paren exp1) `metaChoice`       -- (do ...) +++ 
+                    rhs   = (paren exp1) `metaChoice`       -- (do ...) +++
                             (paren exp2)            --  (do ...)
                 -- Finally we create a declaration for this function and
                 -- add it to the store.
@@ -1314,7 +1360,7 @@ trRPat s linear rp = case rp of
                 -- The type of the returned value is Either the type of the first
                 -- or the second subpattern.
                 return (n, allvs, E t1 t2)
-         
+
             varOrId :: [Name] -> Name -> Exp
             varOrId vs v = if v `elem` vs   -- the variable is indeed bound in this branch
                             then var v      -- ... so it should be added to the result
@@ -1322,13 +1368,13 @@ trRPat s linear rp = case rp of
 
     -- For (possibly non-greedy) repeating regular patterns we need to transform the subpattern,
     -- and then generate a function to handle many matches of it.
-    RPOp rp RPStar -> 
+    RPOp rp RPStar ->
         do -- Transform the subpattern
            nvt <- trRPat s False rp
            -- ... and create a declaration that can match it many times.
            mkStarDecl s False nvt
     -- ... and similarly for the non-greedy version.
-    RPOp rp RPStarG-> 
+    RPOp rp RPStarG->
         do -- Transform the subpattern
            nvt <- trRPat s False rp
            -- ... and create a declaration that can match it many times.
@@ -1336,13 +1382,13 @@ trRPat s linear rp = case rp of
 
     -- For (possibly non-greedy) non-empty repeating patterns we need to transform the subpattern,
     -- and then generate a function to handle one or more matches of it.
-    RPOp rp RPPlus -> 
+    RPOp rp RPPlus ->
         do -- Transform the subpattern
            nvt <- trRPat s False rp
            -- ... and create a declaration that can match it one or more times.
            mkPlusDecl s False nvt
     -- ... and similarly for the non-greedy version.
-    RPOp rp RPPlusG -> 
+    RPOp rp RPPlusG ->
         do -- Transform the subpattern
            nvt <- trRPat s False rp
            -- ... and create a declaration that can match it one or more times.
@@ -1350,7 +1396,7 @@ trRPat s linear rp = case rp of
 
 
   where -- These are the functions that must be in scope for more than one case alternative above.
-  
+
     -- | Generate a declaration for matching a variable.
     mkVarMatch :: SrcLoc -> Bool -> Name -> Tr MFunMetaInfo
     mkVarMatch s linear v = do
@@ -1359,7 +1405,7 @@ trRPat s linear rp = case rp of
             -- Then we need a basic matching function that always matches,
             -- and that binds the value matched to the variable in question.
             let e = paren $ lamE s [pvar v] $       -- (\v -> Just (mf v))
-                              app (var just_name) 
+                              app (var just_name)
                               (paren $ retVar linear v)
             -- Lift the function into the matcher monad, and bind it to its name,
             -- then add it the declaration to the store.
@@ -1368,15 +1414,15 @@ trRPat s linear rp = case rp of
             return (n, [v], S)          -- always binds v and only v
 
           where retVar :: Bool -> Name -> Exp
-                retVar linear v 
+                retVar linear v
                     -- if bound in linear context, apply const
                     | linear    = metaConst (var v)
                     -- if bound in non-linear context, apply (:)
-                    | otherwise = app consFun (var v)   
+                    | otherwise = app consFun (var v)
 
     -- | Generate a declaration for matching a wildcard
     mkWCMatch :: SrcLoc -> Tr MFunMetaInfo
-    mkWCMatch s = do 
+    mkWCMatch s = do
             -- First we need a name...
             n <- genMatchName
             -- ... and then a function that always matches, discarding the result
@@ -1395,9 +1441,9 @@ trRPat s linear rp = case rp of
             PNeg q             -> gatherPVars q
             PInfixApp p1 _ p2  -> gatherPVars p1 ++
                                          gatherPVars p2
-            PApp _ ps          -> concatMap gatherPVars ps 
-            PTuple ps          -> concatMap gatherPVars ps 
-            PList ps           -> concatMap gatherPVars ps 
+            PApp _ ps          -> concatMap gatherPVars ps
+            PTuple ps          -> concatMap gatherPVars ps
+            PList ps           -> concatMap gatherPVars ps
             PParen p           -> gatherPVars p
             PRec _ pfs         -> concatMap help pfs
                 where help (PFieldPat _ p) = gatherPVars p
@@ -1406,13 +1452,13 @@ trRPat s linear rp = case rp of
             PIrrPat p          -> gatherPVars p
             PatTypeSig _ p _   -> gatherPVars p
             PRPat rps          -> concatMap gatherRPVars rps
-            PXTag _ _ attrs mattr cps -> 
+            PXTag _ _ attrs mattr cps ->
                 concatMap gatherAttrVars attrs ++ concatMap gatherPVars cps ++
                     case mattr of
                      Nothing -> []
                      Just ap -> gatherPVars ap
-            PXETag _ _ attrs mattr -> 
-                concatMap gatherAttrVars attrs ++ 
+            PXETag _ _ attrs mattr ->
+                concatMap gatherAttrVars attrs ++
                     case mattr of
                      Nothing -> []
                      Just ap -> gatherPVars ap
@@ -1427,7 +1473,7 @@ trRPat s linear rp = case rp of
             RPCAs n rq       -> n : gatherRPVars rq
             RPAs n rq        -> n : gatherRPVars rq
             RPParen rq       -> gatherRPVars rq
-            RPGuard q gs     -> gatherPVars q ++ concatMap gatherStmtVars gs            
+            RPGuard q gs     -> gatherPVars q ++ concatMap gatherStmtVars gs
             RPPat q          -> gatherPVars q
 
     gatherAttrVars :: PXAttr -> [Name]
@@ -1441,7 +1487,7 @@ trRPat s linear rp = case rp of
     -- | Generate a match function that lift the result of the
     -- basic casing function into the matcher monad.
     mkBaseMatch :: SrcLoc -> Name -> Tr Name
-    mkBaseMatch s name = 
+    mkBaseMatch s name =
             do -- First we need a name...
                n <- genMatchName
                -- ... to which we bind the lifting function
@@ -1452,7 +1498,7 @@ trRPat s linear rp = case rp of
     -- | Generate a declaration for the function that lifts a simple
     -- casing function into the matcher monad.
     baseMatchDecl :: SrcLoc -> Name -> Name -> Decl
-    baseMatchDecl s newname oldname = 
+    baseMatchDecl s newname oldname =
             -- Apply the lifting function "baseMatch" to the casing function
             let e = app baseMatchFun (var oldname)
                 -- ... and bind it to the new name.
@@ -1464,7 +1510,7 @@ trRPat s linear rp = case rp of
     -- Iterate to enable gensym-like behavior.
     mkGenExps :: SrcLoc -> Int -> [MFunMetaInfo] -> [(Stmt, (Name, MType))]
     mkGenExps _ _ [] = []
-    mkGenExps s k ((name, vars, t):nvs) = 
+    mkGenExps s k ((name, vars, t):nvs) =
         let valname = mkValName k                           -- harp_valX
             pat     = pTuple [pvar valname, pvarTuple vars] -- (harp_valX, (foo, bar, ...))
             g       = var name
@@ -1477,14 +1523,14 @@ trRPat s linear rp = case rp of
                       in (g, name)
 
     -- | Generate a single generator with a call to (ng)manyMatch,
-    -- and an extra variable name to use after unzipping. 
+    -- and an extra variable name to use after unzipping.
     mkManyGen :: SrcLoc -> Bool -> Name -> Stmt
     mkManyGen s greedy mname =
         -- Choose which repeater function to use, determined by greed
         let mf  = if greedy then gManyMatchFun else manyMatchFun
          -- ... and create a generator that applies it to the
          -- matching function in question.
-         in genStmt s (pvar valsvarsname) $ 
+         in genStmt s (pvar valsvarsname) $
             app mf (var mname)
 
     -- | Generate declarations for @: and @ bindings.
@@ -1502,7 +1548,7 @@ trRPat s linear rp = case rp of
             ret = qualStmt $ metaReturn $ tuple          -- return (harp_valY, ($mf harp_valY, apa, ...))
                 [var val, tuple $ mf (var val) : vars]   -- mf in the line above is what separates
                                                          -- @: ((:)) from @ (const)
-        -- Finally we create a declaration for this function and 
+        -- Finally we create a declaration for this function and
         -- add it to the store.
         pushDecl $ nameBind s n $ doE [g, ret]           -- harp_matchX = do ...
         return n
@@ -1518,7 +1564,7 @@ trRPat s linear rp = case rp of
             (g, val) = mkGenExp s nvt               -- (harp_valX, (foo, bar, ...)) <- harp_matchY
             -- ... and apply a Just to its value
             ret1 = metaReturn $ tuple               -- return (Just harp_val1, (foo, bar, ...))
-                    [app (var just_name) 
+                    [app (var just_name)
                      (var val), varTuple vs]
             -- ... and do those two steps in a do-expression
             exp1 = doE [g, qualStmt ret1]           -- do ....
@@ -1527,13 +1573,13 @@ trRPat s linear rp = case rp of
             -- ... and the value should be Nothing.
             ret2 = metaReturn $ tuple               -- return (Nothing, (id, id, ...))
                     [var nothing_name, tuple ids]   -- i.e. no vars were bound
-            -- The order of the arguments to the choice (+++) operator 
+            -- The order of the arguments to the choice (+++) operator
             -- is determined by greed...
-            mc   = if greedy 
+            mc   = if greedy
                     then metaChoice        -- standard order
                     else (flip metaChoice) -- reversed order
             -- ... and then apply it to the branches.
-            rhs  = (paren exp1) `mc`                -- (do ....) +++ 
+            rhs  = (paren exp1) `mc`                -- (do ....) +++
                     (paren ret2)                    --  (return (Nothing, .....))
         -- Finally we create a declaration for this function and
         -- add it to the store.
@@ -1541,7 +1587,7 @@ trRPat s linear rp = case rp of
         -- The type of the returned value will be Maybe the type
         -- of the value of the subpattern.
         return (n, vs, M t)
- 
+
     -- | Generate declarations for star patterns, * and #*
     -- (Unfortunally we must place this function here since both variations
     -- of transformations of repeating patterns should be able to call it...)
@@ -1574,7 +1620,7 @@ trRPat s linear rp = case rp of
         -- The type of the returned value is a list ([]) of the
         -- type of the subpattern.
         return (n, vs, L t)
-        
+
     -- | Generate declarations for plus patterns, + and #+
     -- (Unfortunally we must place this function here since both variations
     -- of transformations of non-empty repeating patterns should be able to call it...)
@@ -1608,10 +1654,10 @@ trRPat s linear rp = case rp of
             retExps = map mkRetFormat $ zip vs vlvars       -- foo . (foldComp harp_vl1), ...
             -- ... prepend values from the single match to
             -- those of the many-match.
-            retVal  = (var val1) `metaCons` 
+            retVal  = (var val1) `metaCons`
                         (var valsname)                      -- harp_valX : harp_vals
             -- ... return all values and variables
-            ret     = metaReturn $ tuple $                  -- return (harp_valX:harpVals, 
+            ret     = metaReturn $ tuple $                  -- return (harp_valX:harpVals,
                         [retVal, tuple retExps]             --   (foo . (...), ...))
             -- ... and wrap all of it in a do-expression.
             rhs     = doE [g1, g2, letSt, qualStmt ret]
@@ -1632,7 +1678,7 @@ trRPat s linear rp = case rp of
 --------------------------------------------------------------------------
 -- HaRP-specific functions and ids
 
--- | Functions and ids from the @Match@ module, 
+-- | Functions and ids from the @Match@ module,
 -- used in the generated matching functions
 runMatchFun, baseMatchFun, manyMatchFun, gManyMatchFun :: Exp
 runMatchFun = match_qual runMatch_name
@@ -1666,7 +1712,7 @@ foldCompFun = match_qual $ Ident "foldComp"
 mkMetaUnzip :: SrcLoc -> Int -> Exp -> Exp
 mkMetaUnzip s k | k <= 7 = let n = "unzip" ++ show k
                             in (\e -> matchFunction n [e])
-                | otherwise = 
+                | otherwise =
                    let vs      = genNames "x" k
                        lvs     = genNames "xs" k
                        uz      = name $ "unzip" ++ show k
@@ -1720,7 +1766,7 @@ xNameParts n = case n of
                 XDomName d s -> (Just d, s)
 
 ---------------------------------------------------------
--- meta-level functions, i.e. functions that represent functions, 
+-- meta-level functions, i.e. functions that represent functions,
 -- and that take arguments representing arguments... whew!
 
 metaReturn, metaConst, metaMap, metaUnzip :: Exp -> Exp
@@ -1808,7 +1854,7 @@ metaMkPcdata s = metaFunction "pcdata" [strE s]
 -- | Create an xml tag, given its domain, name, attributes and
 -- children.
 metaGenElement :: XName -> [Exp] -> Maybe Exp -> [Exp] -> Exp
-metaGenElement name ats mat cs = 
+metaGenElement name ats mat cs =
     let (d,n) = xNameParts name
         ne    = tuple [metaMkMaybe $ fmap strE d, strE n]
         m = maybe id (\x y -> paren $ y `metaAppend` (metaMap $ metaAsAttr x)) mat
@@ -1817,7 +1863,7 @@ metaGenElement name ats mat cs =
 
 -- | Create an empty xml tag, given its domain, name and attributes.
 metaGenEElement :: XName -> [Exp] -> Maybe Exp -> Exp
-metaGenEElement name ats mat = 
+metaGenEElement name ats mat =
     let (d,n) = xNameParts name
         ne    = tuple [metaMkMaybe $ fmap strE d, strE n]
         m = maybe id (\x y -> paren $ y `metaAppend` (metaMap $ metaAsAttr x)) mat
@@ -1844,7 +1890,7 @@ metaAsChild e = metaFunction "asChild" [paren e]
 
 -- | Lookup an attribute in the set of attributes.
 metaExtract :: XName -> Name -> Exp
-metaExtract name attrs = 
+metaExtract name attrs =
     let (d,n) = xNameParts name
         np    = tuple [metaMkMaybe $ fmap strE d, strE n]
      in metaFunction "extract" [np, var attrs]
@@ -1855,7 +1901,7 @@ metaTag dom name ats cpat =
     let d = metaPMkMaybe $ fmap strP dom
         n = pTuple [d, strP name]
      in metaConPat "Element" [n, ats, cpat]
-     
+
 -- | Generate a pattern under the PCDATA data constructor.
 metaPcdata :: String -> Pat
 metaPcdata s = metaConPat "CDATA" [strP s]

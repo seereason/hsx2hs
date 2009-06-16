@@ -1,6 +1,6 @@
 module Main where
 
-import Language.Haskell.Exts
+import Language.Haskell.Exts hiding (parse)
 import Prelude hiding (readFile, writeFile)
 import System.IO.UTF8 (readFile, writeFile)
 import HSX.Transform
@@ -52,8 +52,14 @@ process fp fc = prettyPrintWithMode (defaultMode {linePragmas=True}) $
                  transform $ checkParse $ parse fp fc
 
 parse :: String -> String -> ParseResult Module
-parse fn fc = parseModuleWithMode (ParseMode fn) fcuc
+parse fn fc = parseModuleWithMode (ParseMode fn allExtensions baseFixities) fcuc
   where fcuc= unlines $ filter (not . isPrefixOf "#") $ lines fc
 
 usageString :: String
 usageString = "Usage: trhsx <infile> [<outfile>]"
+
+allExtensions = [RecursiveDo,ParallelListComp,MultiParamTypeClasses,FunctionalDependencies,RankNTypes,ExistentialQuantification,
+                    ScopedTypeVariables,ImplicitParams,FlexibleContexts,FlexibleInstances,EmptyDataDecls,KindSignatures,
+                    BangPatterns,TemplateHaskell,ForeignFunctionInterface,Arrows,Generics,NamedFieldPuns,PatternGuards,
+                    MagicHash,TypeFamilies,StandaloneDeriving,TypeOperators,RecordWildCards,GADTs,UnboxedTuples,
+                    PackageImports,QuasiQuotes,TransformListComp,ViewPatterns,XmlSyntax,RegularPatterns]

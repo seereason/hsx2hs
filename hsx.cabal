@@ -1,5 +1,5 @@
 Name:                   hsx
-Version:                0.4.8
+Version:                0.5.0
 License:                BSD3
 License-File:           LICENSE
 Author:                 Niklas Broberg, Joel Björnson
@@ -29,7 +29,7 @@ Description:            HSX (Haskell Source with XML) allows literal XML syntax 
                         
 Homepage:               http://code.google.com/hsp
 
-Build-Depends:          base>3, mtl, haskell-src-exts==0.4.8, utf8-string
+Build-Depends:          base>3 && <5, mtl, haskell-src-exts==0.5.2, utf8-string
 Build-Type:             Simple
 Tested-With:            GHC==6.8.3, GHC==6.10.1
 
