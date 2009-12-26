@@ -1,10 +1,10 @@
 -----------------------------------------------------------------------------
 -- |
 -- Module      :  HSX.Tranform
--- Copyright   :  (c) Niklas Broberg 2004,
+-- Copyright   :  (c) Niklas Broberg 2004-2009
 -- License     :  BSD-style (see the file LICENSE.txt)
 --
--- Maintainer  :  Niklas Broberg, d00nibro@dtek.chalmers.se
+-- Maintainer  :  Niklas Broberg, niklas.broberg@chalmers.se
 -- Stability   :  experimental
 -- Portability :  portable
 --
