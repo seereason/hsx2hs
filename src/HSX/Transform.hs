@@ -124,8 +124,13 @@ transformDecl d = case d of
     -- declarations of automatically instantiated functions
     ClassDecl s c n ns ds cdecls ->
         fmap (ClassDecl s c n ns ds) $ mapM transformClassDecl cdecls
-    -- Type signatures, type, newtype or data declarations, infix declarations
-    -- and default declarations; none can contain regular patterns
+    -- TH splices are expressions and can contain regular patterns
+    SpliceDecl srcloc e ->
+        fmap (SpliceDecl srcloc) $ transformExp e
+    -- Type signatures, type, newtype or data declarations, infix declarations,
+    -- type and data families and instances, foreign imports and exports,
+    -- and default declarations; none can contain regular patterns.
+    -- Note that we don't transform inside rules pragmas!
     _ -> return d
 
 transformInstDecl :: InstDecl -> HsxM InstDecl
@@ -310,25 +315,19 @@ transformExp e = case e of
         e'      <- transformExp e
         stmtss' <- fmap (map concat) $ mapM (mapM transformQualStmt) stmtss
         return $ ParComp e' stmtss'
-{-    Proc p e          -> do
-        -- Preserve semantics of irrefutable regular patterns by postponing
-        -- their evaluation to a let-expression on the right-hand side
-        let ([pat'], rnpss) = unzip $ renameIrrPats [pat]
-        -- Transform the pattern itself
-        ([pat''], attrGuards, guards, decls'') <- transformPatterns srcloc [pat']
-        -- Transform the right-hand side, and add any generated guards
-        -- and let expressions to it.
-        rhs' <- mkGAlts srcloc (attrGuards ++ guards) (concat rnpss) rhs
-        -- Transform declarations in the where clause, adding any generated
-        -- declarations to it.
-        decls' <- case decls of
-               BDecls ds -> do ds' <- mapM transformDecl ds
-                               return $ BDecls $ decls'' ++ ds
-               _           -> error "Cannot bind implicit parameters in the \
-                         \ \'where\' clause of a function using regular patterns."
-
-        return $ Alt srcloc pat'' rhs' decls' -}
-   -- All other expressions simply transform their immediate subterms.
+    Proc s pat rhs          -> do
+        let -- First rename regular patterns
+            (ps, rnpss)  = unzip $ renameRPats [pat]
+            -- ... group them up to one big tuple
+            (rns, rps) = unzip (concat rnpss)
+            alt1 = alt s (pTuple rps) rhs
+            texp = varTuple rns
+            -- ... and put it all in a case expression, which
+            -- can then be transformed in the normal way.
+            e = if null rns then rhs else caseE texp [alt1]
+        rhs' <- transformExp e
+        return $ Lambda s ps rhs'
+    -- All other expressions simply transform their immediate subterms.
     InfixApp e1 op e2 -> transform2exp e1 e2
                                 (\e1 e2 -> InfixApp e1 op e2)
     App e1 e2         -> transform2exp e1 e2 App
@@ -355,17 +354,21 @@ transformExp e = case e of
     RightArrApp e1 e2       -> transform2exp e1 e2 RightArrApp
     LeftArrHighApp e1 e2    -> transform2exp e1 e2 LeftArrHighApp
     RightArrHighApp e1 e2   -> transform2exp e1 e2 RightArrHighApp
-    _           -> return e     -- Warning - will not work inside TH pattern splices!
+
+    CorePragma s e      -> fmap (CorePragma s) $ transformExp e
+    SCCPragma  s e      -> fmap (SCCPragma  s) $ transformExp e
+    GenPragma  s a b e  -> fmap (GenPragma  s a b) $ transformExp e
+    _           -> return e     -- Warning - will not work inside TH brackets!
 
 transformFieldUpdate :: FieldUpdate -> HsxM FieldUpdate
 transformFieldUpdate (FieldUpdate n e) =
         fmap (FieldUpdate n) $ transformExp e
+transformFieldUpdate fup = return fup
 
 transformSplice :: Splice -> HsxM Splice
 transformSplice s = case s of
     ParenSplice e       -> fmap ParenSplice $ transformExp e
     _                   -> return s
-
 
 transform2exp :: Exp -> Exp -> (Exp -> Exp -> a) -> HsxM a
 transform2exp e1 e2 f = do e1' <- transformExp e1
@@ -504,6 +507,8 @@ transformStmt t s = case s of
     -- If the bindings are of implicit parameters we simply transform them as such.
     LetStmt (IPBinds is) ->
         fmap (\is -> [LetStmt (IPBinds is)]) $ mapM transformIPBind is
+    RecStmt stmts   ->
+        fmap (return . RecStmt . concat) $ mapM (transformStmt t) stmts
 
 
 transformQualStmt :: QualStmt -> HsxM [QualStmt]
@@ -672,6 +677,7 @@ renameRP p = case p of
 
   where renameRPf :: PatField -> RN (PatField, [NameBind])
         renameRPf (PFieldPat n p) = rename1pat p (PFieldPat n) renameRP
+        renameRPf pf              = return (pf, [])
 
         renameAttr :: PXAttr -> RN (PXAttr, [NameBind])
         renameAttr (PXAttr s p) = rename1pat p (PXAttr s) renameRP
@@ -751,6 +757,7 @@ renameIrrP p = case p of
 
   where renameIrrPf :: PatField -> RN (PatField, [NameBind])
         renameIrrPf (PFieldPat n p) = rename1pat p (PFieldPat n) renameIrrP
+        renameIrrPf pf = return (pf, [])
 
         renameIrrAttr :: PXAttr -> RN (PXAttr, [NameBind])
         renameIrrAttr (PXAttr s p) = rename1pat p (PXAttr s) renameIrrP
@@ -942,6 +949,9 @@ trPattern s p = case p of
 
     -- Transforming any other patterns simply means transforming
     -- their subparts.
+    PViewPat e p       -> do
+        e' <- liftTr $ transformExp e
+        tr1pat p (PViewPat e') (trPattern s)
     PVar _             -> return p
     PLit _             -> return p
     PNeg q             -> tr1pat q PNeg (trPattern s)
@@ -958,11 +968,13 @@ trPattern s p = case p of
     PExplTypeArg _ _   -> return p
     PQuasiQuote _ _    -> return p
     PBangPat p         -> tr1pat p PBangPat (trPattern s)
+    PNPlusK _ _        -> return p
 
   where -- Transform a pattern field.
     trPatternField :: SrcLoc -> PatField -> Tr PatField
     trPatternField s (PFieldPat n p) =
         tr1pat p (PFieldPat n) (trPattern s)
+    trPatternField _ p = return p
 
     -- Deconstruct an xml tag name into its parts.
     xNameParts :: XName -> (Maybe String, String)
@@ -1447,6 +1459,7 @@ trRPat s linear rp = case rp of
             PParen p           -> gatherPVars p
             PRec _ pfs         -> concatMap help pfs
                 where help (PFieldPat _ p) = gatherPVars p
+                      help _               = []
             PAsPat n p         -> n : gatherPVars p
             PWildCard          -> []
             PIrrPat p          -> gatherPVars p

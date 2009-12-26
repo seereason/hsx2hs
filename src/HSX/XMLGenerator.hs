@@ -1,11 +1,13 @@
-{-# LANGUAGE CPP, TypeFamilies, MultiParamTypeClasses, FunctionalDependencies, FlexibleContexts, FlexibleInstances, UndecidableInstances, TypeSynonymInstances, GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE CPP, TypeFamilies, MultiParamTypeClasses, FunctionalDependencies, 
+      FlexibleContexts, FlexibleInstances, UndecidableInstances, 
+      TypeSynonymInstances, GeneralizedNewtypeDeriving #-}
 -----------------------------------------------------------------------------
 -- |
 -- Module      :  HSX.XMLGenerator
 -- Copyright   :  (c) Niklas Broberg 2008
 -- License     :  BSD-style (see the file LICENSE.txt)
 -- 
--- Maintainer  :  Niklas Broberg, nibro@cs.chalmers.se
+-- Maintainer  :  Niklas Broberg, niklas.broberg@chalmers.se
 -- Stability   :  experimental
 -- Portability :  requires newtype deriving and MPTCs with fundeps
 --
