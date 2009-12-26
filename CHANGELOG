@@ -1,0 +1,12 @@
+0.6.0 --> 0.6.1
+===============
+
+* Upgrade to haskell-src-exts 1.5. Only change is to set the parsing to ignore LINE pragmas.
+
+0.5.5 --> 0.6.0
+===============
+
+* Upgrade to haskell-src-exts 1.4. A lot of added cases in the AST traversal, but 
+  nothing that would really warrant the major version number bump. Still, it feels better this
+  way, to get a fresh start with the new HSE versions.
+
