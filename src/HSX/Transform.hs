@@ -1571,7 +1571,7 @@ trRPat s linear rp = case rp of
     -- of transformations of optional patterns should be able to call it...)
     mkOptDecl :: SrcLoc -> Bool -> MFunMetaInfo -> Tr MFunMetaInfo
     mkOptDecl s greedy nvt@(_, vs, t) = do
-        -- Un nome, s'il vouz plaît.
+        -- Un nome, s'il vouz plaÃ®t.
         n <- genMatchName
         let -- Generate a generator for matching the subpattern
             (g, val) = mkGenExp s nvt               -- (harp_valX, (foo, bar, ...)) <- harp_matchY
