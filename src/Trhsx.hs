@@ -2,16 +2,22 @@ module Main where
 
 import Language.Haskell.Exts hiding (parse)
 import Prelude hiding (readFile, writeFile)
-import System.IO.UTF8 (readFile, writeFile)
+import System.IO.UTF8 (readFile, writeFile,hPutStrLn)
+import System.IO (stderr)
 import HSX.Transform
+import System.Exit (exitFailure)
 
 import System.Environment (getArgs)
 import Data.List (isPrefixOf)
+import Control.Exception (handle,ErrorCall(..))
+  
+showSrcLoc (SrcLoc {srcFilename=srcFilename,srcLine=srcLine,srcColumn=srcColumn}) = 
+  srcFilename ++ ":" ++ show srcLine ++ ":" ++ show srcColumn
 
 checkParse :: ParseResult b -> b
 checkParse p = case p of
                   ParseOk m -> m
-                  ParseFailed loc s -> error $ "Error at " ++ show loc ++ ":\n" ++ s
+                  ParseFailed loc s -> error $ showSrcLoc loc ++ ": " ++ s
 
 transformFile :: String -> String -> String -> IO ()
 transformFile origfile infile outfile = do
@@ -41,11 +47,12 @@ testParse file = do
 
 main :: IO ()
 main = do args <- getArgs
-          case args of
-           [origfile, infile, outfile] -> transformFile origfile infile outfile
-           [infile, outfile] -> transformFile infile infile outfile
-           [infile] -> testFile infile
-           _ -> putStrLn usageString
+          handle (\(ErrorCall text) -> hPutStrLn stderr text >> exitFailure ) $
+           case args of
+            [origfile, infile, outfile] -> transformFile origfile infile outfile
+            [infile, outfile] -> transformFile infile infile outfile
+            [infile] -> testFile infile
+            _ -> putStrLn usageString
 
 process :: FilePath -> String -> String
 process fp fc = prettyPrintWithMode (defaultMode {linePragmas=True}) $
