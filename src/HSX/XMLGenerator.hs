@@ -32,6 +32,10 @@ newtype XMLGenT m a = XMLGenT (m a)
 unXMLGenT :: XMLGenT m a -> m a
 unXMLGenT   (XMLGenT ma) =  ma
 
+-- | map the inner monad
+mapXMLGenT :: (m a -> n b) -> XMLGenT m a -> XMLGenT n b
+mapXMLGenT f (XMLGenT m) = XMLGenT (f m)
+
 instance MonadTrans XMLGenT where
  lift = XMLGenT
 
