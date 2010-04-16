@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 module Main where
 
 import Language.Haskell.Exts hiding (parse)
@@ -9,7 +10,11 @@ import System.Exit (exitFailure)
 
 import System.Environment (getArgs)
 import Data.List (isPrefixOf)
--- import Control.Exception (handle,ErrorCall(..))
+#ifdef BASE4
+import Control.OldException (handle,ErrorCall(..))
+#else
+import Control.Exception (handle,ErrorCall(..))
+#endif
   
 showSrcLoc (SrcLoc {srcFilename=srcFilename,srcLine=srcLine,srcColumn=srcColumn}) = 
   srcFilename ++ ":" ++ show srcLine ++ ":" ++ show srcColumn
@@ -47,8 +52,8 @@ testParse file = do
 
 main :: IO ()
 main = do args <- getArgs
-          -- handle (\(ErrorCall text) -> hPutStrLn stderr text >> exitFailure ) $
-          case args of
+          handle (\(ErrorCall text) -> hPutStrLn stderr text >> exitFailure ) $
+           case args of
             [origfile, infile, outfile] -> transformFile origfile infile outfile
             [infile, outfile] -> transformFile infile infile outfile
             [infile] -> testFile infile
