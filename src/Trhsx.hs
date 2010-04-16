@@ -9,7 +9,7 @@ import System.Exit (exitFailure)
 
 import System.Environment (getArgs)
 import Data.List (isPrefixOf)
-import Control.Exception (handle,ErrorCall(..))
+-- import Control.Exception (handle,ErrorCall(..))
   
 showSrcLoc (SrcLoc {srcFilename=srcFilename,srcLine=srcLine,srcColumn=srcColumn}) = 
   srcFilename ++ ":" ++ show srcLine ++ ":" ++ show srcColumn
@@ -47,8 +47,8 @@ testParse file = do
 
 main :: IO ()
 main = do args <- getArgs
-          handle (\(ErrorCall text) -> hPutStrLn stderr text >> exitFailure ) $
-           case args of
+          -- handle (\(ErrorCall text) -> hPutStrLn stderr text >> exitFailure ) $
+          case args of
             [origfile, infile, outfile] -> transformFile origfile infile outfile
             [infile, outfile] -> transformFile infile infile outfile
             [infile] -> testFile infile
