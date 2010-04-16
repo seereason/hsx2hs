@@ -50,6 +50,7 @@ class Monad m => XMLGen m where
  genEElement :: Name -> [XMLGenT m [Attribute m]]                          -> XMLGenT m (XML m)
  genEElement n ats = genElement n ats []
  xmlToChild :: XML m -> Child m
+ pcdataToChild :: String -> Child m
 
 -- | Type synonyms to avoid writing out the XMLnGenT all the time
 type GenXML m           = XMLGenT m (XML m)
@@ -81,6 +82,9 @@ instance (XMLGen m,  XML m ~ x) => EmbedAsChild m x where
 instance (XMLGen m) => EmbedAsChild m (XML m) where
 #endif
  asChild = return . return . xmlToChild
+
+instance XMLGen m => EmbedAsChild m String where
+ asChild = return . return . pcdataToChild
 
 
 -- | Similarly embed values as attributes of an XML element.
