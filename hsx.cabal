@@ -1,8 +1,8 @@
 Name:                   hsx
-Version:                0.6.3
+Version:                0.7.0
 License:                BSD3
 License-File:           LICENSE
-Author:                 Niklas Broberg, Joel Björnson
+Author:                 Niklas Broberg, Joel Bjornson
 Maintainer:             Niklas Broberg <nibro@cs.chalmers.se>
 
 Stability:              Experimental
