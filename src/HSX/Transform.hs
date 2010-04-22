@@ -1260,7 +1260,7 @@ trRPat s linear rp = case rp of
         flatten S = consFun                         -- (:)
         flatten (L mt) =
             let f = flatten mt
-                r = paren $ metaMap f
+                r = paren $ metaMap [f]
              in paren $ foldCompFun `metaComp` r    -- (foldComp . (map $flatten))
         flatten (E mt1 mt2) =
             let f1 = flatten mt1
@@ -1782,18 +1782,18 @@ xNameParts n = case n of
 -- meta-level functions, i.e. functions that represent functions,
 -- and that take arguments representing arguments... whew!
 
-metaReturn, metaConst, metaMap, metaUnzip :: Exp -> Exp
+metaReturn, metaConst, metaUnzip :: Exp -> Exp
 metaReturn e = metaFunction "return" [e]
 metaConst e  = metaFunction "const" [e]
-metaMap e    = metaFunction "map" [e]
 metaUnzip e  = metaFunction "unzip" [e]
 
 metaEither, metaMaybe :: Exp -> Exp -> Exp
 metaEither e1 e2 = metaFunction "either" [e1,e2]
 metaMaybe e1 e2 = metaFunction "maybe" [e1,e2]
 
-metaConcat :: [Exp] -> Exp
+metaConcat, metaMap :: [Exp] -> Exp
 metaConcat es = metaFunction "concat" [listE es]
+metaMap       = metaFunction "map"
 
 metaAppend :: Exp -> Exp -> Exp
 metaAppend l1 l2 = infixApp l1 appendOp l2
@@ -1870,7 +1870,7 @@ metaGenElement :: XName -> [Exp] -> Maybe Exp -> [Exp] -> Exp
 metaGenElement name ats mat cs =
     let (d,n) = xNameParts name
         ne    = tuple [metaMkMaybe $ fmap strE d, strE n]
-        m = maybe id (\x y -> paren $ y `metaAppend` (metaMap $ metaAsAttr x)) mat
+        m = maybe id (\x y -> paren $ y `metaAppend` (metaMap [argAsAttr, x])) mat
         attrs = m $ listE $ map metaAsAttr ats
      in metaFunction "genElement" [ne, attrs, listE cs]
 
@@ -1879,13 +1879,16 @@ metaGenEElement :: XName -> [Exp] -> Maybe Exp -> Exp
 metaGenEElement name ats mat =
     let (d,n) = xNameParts name
         ne    = tuple [metaMkMaybe $ fmap strE d, strE n]
-        m = maybe id (\x y -> paren $ y `metaAppend` (metaMap $ metaAsAttr x)) mat
+        m = maybe id (\x y -> paren $ y `metaAppend` (metaMap [argAsAttr, x])) mat
         attrs = m $ listE $ map metaAsAttr ats
      in metaFunction "genEElement" [ne, attrs]
 
 -- | Create an attribute by applying the overloaded @asAttr@
 metaAsAttr :: Exp -> Exp
 metaAsAttr e = metaFunction "asAttr" [e]
+
+argAsAttr :: Exp
+argAsAttr = var $ name "asAttr"
 
 -- | Create a property from an attribute and a value.
 metaAssign :: Exp -> Exp -> Exp
