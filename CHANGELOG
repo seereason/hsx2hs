@@ -1,3 +1,22 @@
+0.6.1 --> 0.7.0
+===============
+
+* Give PCDATA children special treatment in the XMLGenerator translations. This is to
+  avoid situations where GHC has too little information to pick the correct instances,
+  and if the only children it sees are PCDATA strings then it defaults to (XML m ~ String).
+  Strings can now never be the XML type of any generator, but chances are fairly small
+  that anyone ever wanted that anyway. It also means that there is always a default
+  instance for EmbedAsChild for literal strings.
+
+* Fix a bug with an erroneous parenthesis in the output of trhsx { (map (asAttr x)) instead
+  of the correct (map asAttr x) }.
+
+* Import OldException on newer versions of base.
+
+* Add mapXMLGenT to XMLGenerator, to allow mapping over the inner monad of a generator.
+
+* Slight change to the format of error messages, to make them emacs-friendly.
+
 0.6.0 --> 0.6.1
 ===============
 
