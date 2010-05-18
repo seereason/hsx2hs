@@ -27,7 +27,7 @@ Description:            HSX (Haskell Source with XML) allows literal XML syntax 
                         Achieving that is not as simple as it may seem, but the XMLGenerator module provides all the
                         necessary machinery.
                         
-Homepage:               http://code.google.com/hsp
+Homepage:               http://code.haskell.com/HSP
 
 Tested-With:            GHC==6.8.3, GHC==6.10.1
 Cabal-Version: 		>= 1.2.3
