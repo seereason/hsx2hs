@@ -19,6 +19,12 @@
 module HSX.XMLGenerator where
 
 import Control.Monad.Trans
+import Control.Monad.Cont  (MonadCont)
+import Control.Monad.Error (MonadError)
+import Control.Monad.Reader(MonadReader)
+import Control.Monad.Writer(MonadWriter)
+import Control.Monad.State (MonadState)
+import Control.Monad.RWS   (MonadRWS)
 import Control.Monad (MonadPlus(..),liftM)
 
 ----------------------------------------------
@@ -26,7 +32,8 @@ import Control.Monad (MonadPlus(..),liftM)
 
 -- | The monad transformer that allows a monad to generate XML values.
 newtype XMLGenT m a = XMLGenT (m a)
-  deriving (Monad, Functor, MonadIO, MonadPlus)
+  deriving (Monad, Functor, MonadIO, MonadPlus, MonadWriter w, MonadReader r,
+            MonadState s, MonadRWS r w s, MonadCont, MonadError e)
 
 -- | un-lift.
 unXMLGenT :: XMLGenT m a -> m a
