@@ -101,6 +101,11 @@ class XMLGen m => EmbedAsAttr m a where
 instance (XMLGen m, EmbedAsAttr m a) => EmbedAsAttr m (XMLGenT m a) where
  asAttr ma = ma >>= asAttr
 
+instance (EmbedAsAttr m (Attr a v), TypeCastM m1 m) => EmbedAsAttr m (Attr a (XMLGenT m1 v)) where
+ asAttr (a := (XMLGenT m1a)) = do
+            v <- XMLGenT $ typeCastM m1a
+            asAttr (a := v)
+
 instance XMLGen m => EmbedAsAttr m (Attribute m) where
  asAttr = return . return
 
