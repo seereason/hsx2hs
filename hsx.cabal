@@ -36,7 +36,7 @@ Build-Type:             Simple
 Flag base4
 
 Library
-  Build-depends:	mtl, haskell-src-exts >= 1.5, utf8-string
+  Build-depends:	mtl, haskell-src-exts >= 1.10, utf8-string
   if flag(base4)
     Build-depends:      base >= 4 && < 5
     cpp-options:        -DBASE4

@@ -232,17 +232,6 @@ transformExp e = case e of
         -- ... and lift the values into the XML datatype.
         return $ paren $ metaGenElement name as mattr cs'
 
-      where
-        -- | Transform expressions appearing in child position of an xml tag.
-        -- Expressions are first transformed, then wrapped in a call to
-        -- @toXml@.
-        transformChild :: Exp -> HsxM Exp
-        transformChild e = do
-            -- Transform the expression
-            te <- transformExp e
-            -- ... and apply the overloaded toXMLs to it
-            return $ metaAsChild te
-
     -- An empty xml tag should be transformed just as a standard tag,
     -- only that there are no children,
     XETag _ name attrs mattr -> do
@@ -252,6 +241,17 @@ transformExp e = case e of
             as = map mkAttr attrs
             -- ... and lift the values into the XML datatype.
         return $ paren $ metaGenEElement name as mattr
+
+    -- A child tag should be transformed into an application
+    -- of asChild to a list of children.
+    XChildTag _ cs  -> do
+        -- After all, it IS christmas!
+        setXmlTransformed
+        -- ... transform the children
+        cs' <- mapM transformChild cs
+        -- ... and make them into a list
+        return $ paren $ metaAsChild $ listE cs'
+
     -- PCDATA should be lifted as a string into the XML datatype.
     XPcdata pcdata    -> do setXmlTransformed
                             return $ strE pcdata
@@ -259,6 +259,7 @@ transformExp e = case e of
     XExpTag e     -> do setXmlTransformed
                         e' <- transformExp e
                         return $ paren $ metaAsChild e'
+
     -- Patterns as arguments to a lambda expression could be regular,
     -- but we cannot put the evaluation here since a lambda expression
     -- can have neither guards nor a where clause. Thus we must postpone
@@ -359,6 +360,16 @@ transformExp e = case e of
     SCCPragma  s e      -> fmap (SCCPragma  s) $ transformExp e
     GenPragma  s a b e  -> fmap (GenPragma  s a b) $ transformExp e
     _           -> return e     -- Warning - will not work inside TH brackets!
+  where
+    -- | Transform expressions appearing in child position of an xml tag.
+    -- Expressions are first transformed, then wrapped in a call to
+    -- @toXml@.
+    transformChild :: Exp -> HsxM Exp
+    transformChild e = do
+        -- Transform the expression
+        te <- transformExp e
+        -- ... and apply the overloaded toXMLs to it
+        return $ metaAsChild te
 
 transformFieldUpdate :: FieldUpdate -> HsxM FieldUpdate
 transformFieldUpdate (FieldUpdate n e) =

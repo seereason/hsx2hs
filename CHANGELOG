@@ -1,3 +1,17 @@
+0.7.0 --> 0.8.0
+===============
+
+* Introduce the new child tag syntax available with haskell-src-exts 1.10.x:
+
+	<%><foo/>bar</%> 
+  
+  now translates into the equivalent of 
+
+	asChild [asChild <foo/>, asChild "bar"]
+
+  (though of course with appropriate translation of the <foo/> component as well).
+
+
 0.6.1 --> 0.7.0
 ===============
 
