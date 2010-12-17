@@ -122,6 +122,8 @@ instance EmbedAsAttr m a => EmbedAsAttr m [a] where
 class (XMLGen m,
        SetAttr m (XML m),
        AppendChild m (XML m),
+       EmbedAsChild m (XML m),
+       EmbedAsChild m [XML m],
        EmbedAsChild m String,
        EmbedAsChild m Char, -- for overlap purposes
        EmbedAsAttr m (Attr String String),
