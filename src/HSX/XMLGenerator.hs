@@ -73,10 +73,15 @@ type GenAttributeList m = XMLGenT m [Attribute m]
 class XMLGen m => EmbedAsChild m c where
  asChild :: c -> GenChildList m
 
+#if __GLASGOW_HASKELL__ >= 610
+instance (EmbedAsChild m c, m ~ n) => EmbedAsChild m (XMLGenT n c) where
+ asChild m = asChild =<< m
+#else
 instance (EmbedAsChild m c, TypeCastM m1 m) => EmbedAsChild m (XMLGenT m1 c) where
  asChild (XMLGenT m1a) = do
             a <- XMLGenT $ typeCastM m1a
             asChild a
+#endif
 
 instance EmbedAsChild m c => EmbedAsChild m [c] where
  asChild = liftM concat . mapM asChild
