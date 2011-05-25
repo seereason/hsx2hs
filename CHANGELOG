@@ -1,3 +1,16 @@
+0.9.0 --> 0.9.1
+===============
+
+* Upgrade to haskell-src-exts 1.11. Only change is to add a Just constructor
+  in Trhsx to the fixities used when parsing, to retain the previous behavior.
+
+
+0.8.0 --> 0.9.0
+===============
+
+* Several small changes relating to upgrades to use type equality constraints.
+
+
 0.7.0 --> 0.8.0
 ===============
 

@@ -64,7 +64,7 @@ process fp fc = prettyPrintWithMode (defaultMode {linePragmas=True}) $
                  transform $ checkParse $ parse fp fc
 
 parse :: String -> String -> ParseResult Module
-parse fn fc = parseModuleWithMode (ParseMode fn allExtensions False True baseFixities) fcuc
+parse fn fc = parseModuleWithMode (ParseMode fn allExtensions False True (Just baseFixities)) fcuc
   where fcuc= unlines $ filter (not . isPrefixOf "#") $ lines fc
 
 usageString :: String
