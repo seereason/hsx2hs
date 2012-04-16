@@ -1128,10 +1128,10 @@ trRPat s linear rp = case rp of
                     -- First the alternative if we actually
                     -- match the given pattern
                     let alt1 = alt s p                  -- foo -> Just (mf foo)
-                                (app (var just_name) $
+                                (app (con just_name) $
                                  tuple (map (retVar b) vs))
                         -- .. and finally an alternative for not matching the pattern.
-                        alt2 = alt s wildcard (var nothing_name)        -- _ -> Nothing
+                        alt2 = alt s wildcard (con nothing_name)        -- _ -> Nothing
                         -- ... and that pattern could itself contain regular patterns
                         -- so we must transform away these.
                     alt1' <- liftTr $ transformAlt alt1
@@ -1191,10 +1191,10 @@ trRPat s linear rp = case rp of
                         -- First the alternative if we actually
                         -- match the given pattern
                         let alt1 = altGW s p gs                 -- foo -> Just (mf foo)
-                                    (app (var just_name) $
+                                    (app (con just_name) $
                                      tuple (map (retVar b) vs)) noBinds
                             -- .. and finally an alternative for not matching the pattern.
-                            alt2 = alt s wildcard (var nothing_name)        -- _ -> Nothing
+                            alt2 = alt s wildcard (con nothing_name)        -- _ -> Nothing
                             -- ... and that pattern could itself contain regular patterns
                             -- so we must transform away these.
                         alt1' <- liftTr $ transformAlt alt1
@@ -1366,10 +1366,10 @@ trRPat s linear rp = case rp of
                     vals2 = map (varOrId vs2) allvs
                     -- ... apply either Left or Right to the returned value
                     ret1  = metaReturn $ tuple          -- return (Left harp_val1, (foo, id, ...))
-                                [app (var left_name)
+                                [app (con left_name)
                                  (var v1), tuple vals1]
                     ret2  = metaReturn $ tuple          -- return (Right harp_val2, (id, bar, ...))
-                                [app (var right_name)
+                                [app (con right_name)
                                  (var v2), tuple vals2]
                     -- ... and do all these things in do-expressions
                     exp1  = doE [g1, qualStmt ret1]
@@ -1428,7 +1428,7 @@ trRPat s linear rp = case rp of
             -- Then we need a basic matching function that always matches,
             -- and that binds the value matched to the variable in question.
             let e = paren $ lamE s [pvar v] $       -- (\v -> Just (mf v))
-                              app (var just_name)
+                              app (con just_name)
                               (paren $ retVar linear v)
             -- Lift the function into the matcher monad, and bind it to its name,
             -- then add it the declaration to the store.
@@ -1450,7 +1450,7 @@ trRPat s linear rp = case rp of
             n <- genMatchName
             -- ... and then a function that always matches, discarding the result
             let e = paren $ lamE s [wildcard] $     -- (\_ -> Just ())
-                                app (var just_name) unit_con
+                                app (con just_name) unit_con
             -- ... which we lift, bind, and add to the store.
             pushDecl $ nameBind s n $       -- harp_matchX = baseMatch (\_ -> Just ())
                          app baseMatchFun e
@@ -1588,7 +1588,7 @@ trRPat s linear rp = case rp of
             (g, val) = mkGenExp s nvt               -- (harp_valX, (foo, bar, ...)) <- harp_matchY
             -- ... and apply a Just to its value
             ret1 = metaReturn $ tuple               -- return (Just harp_val1, (foo, bar, ...))
-                    [app (var just_name)
+                    [app (con just_name)
                      (var val), varTuple vs]
             -- ... and do those two steps in a do-expression
             exp1 = doE [g, qualStmt ret1]           -- do ....
@@ -1596,7 +1596,7 @@ trRPat s linear rp = case rp of
             ids  = map (const idFun) vs             -- (id, id, ...)
             -- ... and the value should be Nothing.
             ret2 = metaReturn $ tuple               -- return (Nothing, (id, id, ...))
-                    [var nothing_name, tuple ids]   -- i.e. no vars were bound
+                    [con nothing_name, tuple ids]   -- i.e. no vars were bound
             -- The order of the arguments to the choice (+++) operator
             -- is determined by greed...
             mc   = if greedy
@@ -1832,10 +1832,10 @@ metaPMkMaybe mp = case mp of
     Just p  -> pParen $ metaPJust p
 
 metaJust :: Exp -> Exp
-metaJust e = app (var just_name) e
+metaJust e = app (con just_name) e
 
 metaNothing :: Exp
-metaNothing = var nothing_name
+metaNothing = con nothing_name
 
 metaMkMaybe :: Maybe Exp -> Exp
 metaMkMaybe me = case me of
@@ -1848,6 +1848,9 @@ consFun, idFun :: Exp
 consFun = Con cons
 idFun = function "id"
 
+con :: Name -> Exp
+con = Con . UnQual
+
 cons :: QName
 cons = Special Cons
 
@@ -1857,10 +1860,10 @@ choice = Symbol "+++"
 append = Symbol "++"
 
 just_name, nothing_name, left_name, right_name :: Name
-just_name = Ident "Just"
+just_name    = Ident "Just"
 nothing_name = Ident "Nothing"
-left_name = Ident "Left"
-right_name = Ident "Right"
+left_name    = Ident "Left"
+right_name   = Ident "Right"
 
 ------------------------------------------------------------------------
 -- Help functions for meta programming xml
