@@ -14,7 +14,8 @@
 -----------------------------------------------------------------------------
 
 module HSX.Transform (
-    transform       -- :: HsModule -> HsModule
+      transform       -- :: HsModule -> HsModule
+    , transformExp
     ) where
 
 import Language.Haskell.Exts.Syntax
@@ -126,7 +127,7 @@ transformDecl d = case d of
         fmap (ClassDecl s c n ns ds) $ mapM transformClassDecl cdecls
     -- TH splices are expressions and can contain regular patterns
     SpliceDecl srcloc e ->
-        fmap (SpliceDecl srcloc) $ transformExp e
+        fmap (SpliceDecl srcloc) $ transformExpM e
     -- Type signatures, type, newtype or data declarations, infix declarations,
     -- type and data families and instances, foreign imports and exports,
     -- and default declarations; none can contain regular patterns.
@@ -176,7 +177,7 @@ mkRhs srcloc guards rnps (UnGuardedRhs rhs) = do
     -- Add the postponed patterns to the right-hand side by placing
     -- them in a let-expression to make them lazily evaluated.
     -- Then transform the whole right-hand side as an expression.
-    rhs' <- transformExp $ addLetDecls srcloc rnps rhs
+    rhs' <- transformExpM $ addLetDecls srcloc rnps rhs
     case guards of
      -- There were no guards before, and none should be added,
      -- so we still have an unguarded right-hand side
@@ -190,7 +191,7 @@ mkRhs _ guards rnps (GuardedRhss gdrhss) = fmap GuardedRhss $ mapM (mkGRhs guard
             -- Add the postponed patterns to the right-hand side by placing
             -- them in a let-expression to make them lazily evaluated.
             -- Then transform the whole right-hand side as an expression.
-            rhs' <- transformExp $ addLetDecls s rnps rhs
+            rhs' <- transformExpM $ addLetDecls s rnps rhs
             -- Now there are guards, so first we need to transform those
             oldgs' <- fmap concat $ mapM (transformStmt GuardStmt) oldgs
             -- ... and then prepend the newly generated ones, as statements
@@ -217,8 +218,19 @@ mkDecl srcloc (n,p) = patBind srcloc p (var n)
 -- and @do@-expressions. All other expressions simply transform their
 -- sub-expressions, if any.
 -- Of special interest are of course also any xml expressions.
-transformExp :: Exp -> HsxM Exp
-transformExp e = case e of
+transformExp :: Exp -> Exp
+transformExp e =
+    let (e', _) = runHsxM $ transformExpM e
+    in e'
+
+-- | Transform expressions by traversing subterms.
+-- Of special interest are expressions that contain patterns as subterms,
+-- i.e. @let@, @case@ and lambda expressions, and also list comprehensions
+-- and @do@-expressions. All other expressions simply transform their
+-- sub-expressions, if any.
+-- Of special interest are of course also any xml expressions.
+transformExpM :: Exp -> HsxM Exp
+transformExpM e = case e of
     -- A standard xml tag should be transformed into an element of the
     -- XML datatype. Attributes should be made into a set of mappings,
     -- and children should be transformed.
@@ -257,7 +269,7 @@ transformExp e = case e of
                             return $ strE pcdata
     -- Escaped expressions should be treated as just expressions.
     XExpTag e     -> do setXmlTransformed
-                        e' <- transformExp e
+                        e' <- transformExpM e
                         return $ paren $ metaAsChild e'
 
     -- Patterns as arguments to a lambda expression could be regular,
@@ -274,7 +286,7 @@ transformExp e = case e of
             -- ... and put it all in a case expression, which
             -- can then be transformed in the normal way.
             e = if null rns then rhs else caseE texp [alt1]
-        rhs' <- transformExp e
+        rhs' <- transformExpM e
         return $ Lambda s ps rhs'
     -- A let expression can contain regular patterns in the declarations,
     -- or in the expression that makes up the body of the let.
@@ -283,7 +295,7 @@ transformExp e = case e of
         -- in a special way due to scoping, see later documentation.
         -- The body is transformed as a normal expression.
         ds' <- transformLetDecls ds
-        e'  <- transformExp e
+        e'  <- transformExpM e
         return $ letE ds' e'
     -- Bindings of implicit parameters can appear either in ordinary let
     -- expressions (GHC), in dlet expressions (Hugs) or in a with clause
@@ -291,12 +303,12 @@ transformExp e = case e of
     -- is transformed as a normal expression in all cases.
     Let (IPBinds is) e -> do
         is' <- mapM transformIPBind is
-        e'  <- transformExp e
+        e'  <- transformExpM e
         return $ Let (IPBinds is') e'
     -- A case expression can contain regular patterns in the expression
     -- that is the subject of the casing, or in either of the alternatives.
     Case e alts -> do
-        e'    <- transformExp e
+        e'    <- transformExpM e
         alts' <- mapM transformAlt alts
         return $ Case e' alts'
     -- A do expression can contain regular patterns in its statements.
@@ -309,11 +321,11 @@ transformExp e = case e of
     -- A list comprehension can contain regular patterns in the result
     -- expression, or in any of its statements.
     ListComp e stmts  -> do
-        e'     <- transformExp e
+        e'     <- transformExpM e
         stmts' <- fmap concat $ mapM transformQualStmt stmts
         return $ ListComp e' stmts'
     ParComp e stmtss  -> do
-        e'      <- transformExp e
+        e'      <- transformExpM e
         stmtss' <- fmap (map concat) $ mapM (mapM transformQualStmt) stmtss
         return $ ParComp e' stmtss'
     Proc s pat rhs          -> do
@@ -326,29 +338,29 @@ transformExp e = case e of
             -- ... and put it all in a case expression, which
             -- can then be transformed in the normal way.
             e = if null rns then rhs else caseE texp [alt1]
-        rhs' <- transformExp e
+        rhs' <- transformExpM e
         return $ Lambda s ps rhs'
     -- All other expressions simply transform their immediate subterms.
     InfixApp e1 op e2 -> transform2exp e1 e2
                                 (\e1 e2 -> InfixApp e1 op e2)
     App e1 e2         -> transform2exp e1 e2 App
-    NegApp e          -> fmap NegApp $ transformExp e
+    NegApp e          -> fmap NegApp $ transformExpM e
     If e1 e2 e3       -> transform3exp e1 e2 e3 If
-    Tuple es          -> fmap Tuple $ mapM transformExp es
-    List es           -> fmap List $ mapM transformExp es
-    Paren e           -> fmap Paren $ transformExp e
-    LeftSection e op  -> do e' <- transformExp e
+    Tuple es          -> fmap Tuple $ mapM transformExpM es
+    List es           -> fmap List $ mapM transformExpM es
+    Paren e           -> fmap Paren $ transformExpM e
+    LeftSection e op  -> do e' <- transformExpM e
                             return $ LeftSection e' op
-    RightSection op e -> fmap (RightSection op) $ transformExp e
+    RightSection op e -> fmap (RightSection op) $ transformExpM e
     RecConstr n fus   -> fmap (RecConstr n) $ mapM transformFieldUpdate fus
-    RecUpdate e fus   -> do e'   <- transformExp e
+    RecUpdate e fus   -> do e'   <- transformExpM e
                             fus' <- mapM transformFieldUpdate fus
                             return $ RecUpdate e' fus'
-    EnumFrom e        -> fmap EnumFrom $ transformExp e
+    EnumFrom e        -> fmap EnumFrom $ transformExpM e
     EnumFromTo e1 e2  -> transform2exp e1 e2 EnumFromTo
     EnumFromThen e1 e2      -> transform2exp e1 e2 EnumFromThen
     EnumFromThenTo e1 e2 e3 -> transform3exp e1 e2 e3 EnumFromThenTo
-    ExpTypeSig s e t  -> do e' <- transformExp e
+    ExpTypeSig s e t  -> do e' <- transformExpM e
                             return $ ExpTypeSig s e' t
     SpliceExp s       -> fmap SpliceExp $ transformSplice s
     LeftArrApp e1 e2        -> transform2exp e1 e2 LeftArrApp
@@ -356,9 +368,9 @@ transformExp e = case e of
     LeftArrHighApp e1 e2    -> transform2exp e1 e2 LeftArrHighApp
     RightArrHighApp e1 e2   -> transform2exp e1 e2 RightArrHighApp
 
-    CorePragma s e      -> fmap (CorePragma s) $ transformExp e
-    SCCPragma  s e      -> fmap (SCCPragma  s) $ transformExp e
-    GenPragma  s a b e  -> fmap (GenPragma  s a b) $ transformExp e
+    CorePragma s e      -> fmap (CorePragma s) $ transformExpM e
+    SCCPragma  s e      -> fmap (SCCPragma  s) $ transformExpM e
+    GenPragma  s a b e  -> fmap (GenPragma  s a b) $ transformExpM e
     _           -> return e     -- Warning - will not work inside TH brackets!
   where
     -- | Transform expressions appearing in child position of an xml tag.
@@ -367,29 +379,29 @@ transformExp e = case e of
     transformChild :: Exp -> HsxM Exp
     transformChild e = do
         -- Transform the expression
-        te <- transformExp e
+        te <- transformExpM e
         -- ... and apply the overloaded toXMLs to it
         return $ metaAsChild te
 
 transformFieldUpdate :: FieldUpdate -> HsxM FieldUpdate
 transformFieldUpdate (FieldUpdate n e) =
-        fmap (FieldUpdate n) $ transformExp e
+        fmap (FieldUpdate n) $ transformExpM e
 transformFieldUpdate fup = return fup
 
 transformSplice :: Splice -> HsxM Splice
 transformSplice s = case s of
-    ParenSplice e       -> fmap ParenSplice $ transformExp e
+    ParenSplice e       -> fmap ParenSplice $ transformExpM e
     _                   -> return s
 
 transform2exp :: Exp -> Exp -> (Exp -> Exp -> a) -> HsxM a
-transform2exp e1 e2 f = do e1' <- transformExp e1
-                           e2' <- transformExp e2
+transform2exp e1 e2 f = do e1' <- transformExpM e1
+                           e2' <- transformExpM e2
                            return $ f e1' e2'
 
 transform3exp :: Exp -> Exp -> Exp -> (Exp -> Exp -> Exp -> a) -> HsxM a
-transform3exp e1 e2 e3 f = do e1' <- transformExp e1
-                              e2' <- transformExp e2
-                              e3' <- transformExp e3
+transform3exp e1 e2 e3 f = do e1' <- transformExpM e1
+                              e2' <- transformExpM e2
+                              e3' <- transformExpM e3
                               return $ f e1' e2' e3'
 
 mkAttr :: XAttr -> Exp
@@ -462,7 +474,7 @@ transformLetDecls ds = do
 -- regular patterns there...
 transformIPBind :: IPBind -> HsxM IPBind
 transformIPBind (IPBind s n e) =
-    fmap (IPBind s n) $ transformExp e
+    fmap (IPBind s n) $ transformExpM e
 
 ------------------------------------------------------------------------------------
 -- Statements of various kinds
@@ -502,7 +514,7 @@ transformStmt t s = case s of
         -- Add the postponed patterns to the right-hand side by placing
         -- them in a let-expression to make them lazily evaluated.
         -- Then transform the whole right-hand side as an expression.
-        e' <- transformExp $ addLetDecls s (concat rnpss) e
+        e' <- transformExpM $ addLetDecls s (concat rnpss) e
         return $ Generator s p'' e':lt ++ gs'
       where monadify :: Guard -> Stmt
             -- To monadify is to create a statement guard, only that the
@@ -510,7 +522,7 @@ transformStmt t s = case s of
             -- the value gotten from the guard.
             monadify (s,p,e) = genStmt s p (metaReturn $ paren e)
     -- Qualifiers are simply wrapped expressions and are treated as such.
-    Qualifier e -> fmap (\e -> [Qualifier $ e]) $ transformExp e
+    Qualifier e -> fmap (\e -> [Qualifier $ e]) $ transformExpM e
     -- Let statements suffer from the same problem as let expressions, so
     -- the declarations should be treated in the same special way.
     LetStmt (BDecls ds)  ->
@@ -526,10 +538,10 @@ transformQualStmt :: QualStmt -> HsxM [QualStmt]
 transformQualStmt qs = case qs of
     -- For qual statments in list comprehensions we just pass on the baton
     QualStmt     s      -> fmap (map QualStmt) $ transformStmt ListCompStmt s
-    ThenTrans    e      -> fmap (return . ThenTrans) $ transformExp e
+    ThenTrans    e      -> fmap (return . ThenTrans) $ transformExpM e
     ThenBy       e f    -> fmap return $ transform2exp e f ThenBy
-    GroupBy      e      -> fmap (return . GroupBy) $ transformExp e
-    GroupUsing   f      -> fmap (return . GroupUsing) $ transformExp f
+    GroupBy      e      -> fmap (return . GroupBy) $ transformExpM e
+    GroupUsing   f      -> fmap (return . GroupUsing) $ transformExpM f
     GroupByUsing e f    -> fmap return $ transform2exp e f GroupByUsing
 
 ------------------------------------------------------------------------------------------
@@ -565,7 +577,7 @@ transformAlt (Alt srcloc pat rhs decls) = do
             -- Add the postponed patterns to the right-hand side by placing
             -- them in a let-expression to make them lazily evaluated.
             -- Then transform the whole right-hand side as an expression.
-            rhs' <- transformExp $ addLetDecls s rnps rhs
+            rhs' <- transformExpM $ addLetDecls s rnps rhs
             case guards of
              -- There were no guards before, and none should be added,
              -- so we still have an unguarded right-hand side
@@ -580,7 +592,7 @@ transformAlt (Alt srcloc pat rhs decls) = do
                     -- Add the postponed patterns to the right-hand side by placing
                     -- them in a let-expression to make them lazily evaluated.
                     -- Then transform the whole right-hand side as an expression.
-                    rhs'   <- transformExp $ addLetDecls s rnps rhs
+                    rhs'   <- transformExpM $ addLetDecls s rnps rhs
                     -- Now there are guards, so first we need to transform those
                     oldgs' <- fmap concat $ mapM (transformStmt GuardStmt) oldgs
                     -- ... and then prepend the newly generated ones, as statements
@@ -961,7 +973,7 @@ trPattern s p = case p of
     -- Transforming any other patterns simply means transforming
     -- their subparts.
     PViewPat e p       -> do
-        e' <- liftTr $ transformExp e
+        e' <- liftTr $ transformExpM e
         tr1pat p (PViewPat e') (trPattern s)
     PVar _             -> return p
     PLit _             -> return p
