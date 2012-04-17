@@ -99,6 +99,8 @@ instance (XMLGen m) => EmbedAsChild m (XMLType m) where
 instance XMLGen m => EmbedAsChild m String where
  asChild = return . return . pcdataToChild
 
+instance XMLGen m => EmbedAsChild m () where
+ asChild _ = return []
 
 -- | Similarly embed values as attributes of an XML element.
 class XMLGen m => EmbedAsAttr m a where
@@ -126,6 +128,7 @@ class (XMLGen m,
        EmbedAsChild m [XMLType m],
        EmbedAsChild m String,
        EmbedAsChild m Char, -- for overlap purposes
+       EmbedAsChild m (),
        EmbedAsAttr m (Attr String String),
        EmbedAsAttr m (Attr String Int),
        EmbedAsAttr m (Attr String Bool)
@@ -135,10 +138,13 @@ class (XMLGen m,
 -- This is certainly true, but we want the various generators to explicitly state it,
 -- in order to get the error messages right.
 instance (XMLGen m,
-       SetAttr m (XML m),
-       AppendChild m (XML m),
+       SetAttr m (XMLType m),
+       AppendChild m (XMLType m),
+       EmbedAsChild m (XMLType m),
+       EmbedAsChild m [XMLType m],
        EmbedAsChild m String,
        EmbedAsChild m Char,
+       EmbedAsChild m (),
        EmbedAsAttr m (Attr String String),
        EmbedAsAttr m (Attr String Int),
        EmbedAsAttr m (Attr String Bool)
