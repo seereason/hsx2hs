@@ -51,22 +51,22 @@ type Name = (Maybe String, String)
 
 -- | Generate XML values in some XMLGenerator monad.
 class Monad m => XMLGen m where
- type XML m
- data Child m
- data Attribute m
- genElement  :: Name -> [XMLGenT m [Attribute m]] -> [XMLGenT m [Child m]] -> XMLGenT m (XML m)
- genEElement :: Name -> [XMLGenT m [Attribute m]]                          -> XMLGenT m (XML m)
+ type XMLType m
+ data ChildType m
+ data AttributeType m
+ genElement  :: Name -> [XMLGenT m [AttributeType m]] -> [XMLGenT m [ChildType m]] -> XMLGenT m (XMLType m)
+ genEElement :: Name -> [XMLGenT m [AttributeType m]]                              -> XMLGenT m (XMLType m)
  genEElement n ats = genElement n ats []
- xmlToChild :: XML m -> Child m
- pcdataToChild :: String -> Child m
+ xmlToChild :: XMLType m -> ChildType m
+ pcdataToChild :: String -> ChildType m
 
 -- | Type synonyms to avoid writing out the XMLnGenT all the time
-type GenXML m           = XMLGenT m (XML m)
-type GenXMLList m       = XMLGenT m [XML m]
-type GenChild m         = XMLGenT m (Child m)
-type GenChildList m     = XMLGenT m [Child m]
-type GenAttribute m     = XMLGenT m (Attribute m)
-type GenAttributeList m = XMLGenT m [Attribute m]
+type GenXML m           = XMLGenT m (XMLType m)
+type GenXMLList m       = XMLGenT m [XMLType m]
+type GenChild m         = XMLGenT m (ChildType m)
+type GenChildList m     = XMLGenT m [ChildType m]
+type GenAttribute m     = XMLGenT m (AttributeType m)
+type GenAttributeList m = XMLGenT m [AttributeType m]
 
 -- | Embed values as child nodes of an XML element. The parent type will be clear
 -- from the context so it is not mentioned.
@@ -86,13 +86,13 @@ instance (EmbedAsChild m c, TypeCastM m1 m) => EmbedAsChild m (XMLGenT m1 c) whe
 instance EmbedAsChild m c => EmbedAsChild m [c] where
  asChild = liftM concat . mapM asChild
 
-instance XMLGen m => EmbedAsChild m (Child m) where
+instance XMLGen m => EmbedAsChild m (ChildType m) where
  asChild = return . return
 
 #if __GLASGOW_HASKELL__ >= 610
-instance (XMLGen m,  XML m ~ x) => EmbedAsChild m x where
+instance (XMLGen m,  XMLType m ~ x) => EmbedAsChild m x where
 #else
-instance (XMLGen m) => EmbedAsChild m (XML m) where
+instance (XMLGen m) => EmbedAsChild m (XMLType m) where
 #endif
  asChild = return . return . xmlToChild
 
@@ -112,7 +112,7 @@ instance (EmbedAsAttr m (Attr a v), TypeCastM m1 m) => EmbedAsAttr m (Attr a (XM
             v <- XMLGenT $ typeCastM m1a
             asAttr (a := v)
 
-instance XMLGen m => EmbedAsAttr m (Attribute m) where
+instance XMLGen m => EmbedAsAttr m (AttributeType m) where
  asAttr = return . return
 
 instance EmbedAsAttr m a => EmbedAsAttr m [a] where
@@ -120,10 +120,10 @@ instance EmbedAsAttr m a => EmbedAsAttr m [a] where
 
 
 class (XMLGen m,
-       SetAttr m (XML m),
-       AppendChild m (XML m),
-       EmbedAsChild m (XML m),
-       EmbedAsChild m [XML m],
+       SetAttr m (XMLType m),
+       AppendChild m (XMLType m),
+       EmbedAsChild m (XMLType m),
+       EmbedAsChild m [XMLType m],
        EmbedAsChild m String,
        EmbedAsChild m Char, -- for overlap purposes
        EmbedAsAttr m (Attr String String),
