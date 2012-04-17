@@ -20,6 +20,7 @@ module HSX.Transform (
 
 import Language.Haskell.Exts.Syntax
 import Language.Haskell.Exts.Build
+import Language.Haskell.Exts.SrcLoc (noLoc)
 import Data.List (union)
 
 import Debug.Trace (trace)
@@ -266,7 +267,7 @@ transformExpM e = case e of
 
     -- PCDATA should be lifted as a string into the XML datatype.
     XPcdata pcdata    -> do setXmlTransformed
-                            return $ strE pcdata
+                            return $ ExpTypeSig noLoc (strE pcdata) (TyCon (UnQual (Ident "String")))
     -- Escaped expressions should be treated as just expressions.
     XExpTag e     -> do setXmlTransformed
                         e' <- transformExpM e
