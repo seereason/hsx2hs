@@ -64,8 +64,8 @@ process fp fc = prettyPrintWithMode (defaultMode {linePragmas=True}) $
                  transform $ checkParse $ parse fp fc
 
 parse :: String -> String -> ParseResult Module
-parse fn fc = parseModuleWithMode (ParseMode fn allExtensions False True (Just baseFixities)) fcuc
-  where fcuc= unlines $ filter (not . isPrefixOf "#") $ lines fc
+parse fn fc = parseFileContentsWithMode (ParseMode fn allExtensions False True Nothing) fc
+--  where fcuc= unlines $ filter (not . isPrefixOf "#") $ lines fc
 
 usageString :: String
 usageString = "Usage: trhsx <infile> [<outfile>]"
