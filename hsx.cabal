@@ -7,8 +7,8 @@ Maintainer:             Niklas Broberg <niklas.broberg@gmail.com>
 
 Stability:              Experimental
 Category:               Language
-Synopsis:               HSX (Haskell Source with XML) allows literal XML syntax to be used in Haskell source code.
-Description:            HSX (Haskell Source with XML) allows literal XML syntax to be used in Haskell source code.
+Synopsis:               HSX (Haskell Source with XML) allows literal XML syntax in Haskell source code.
+Description:            HSX (Haskell Source with XML) allows literal XML syntax in Haskell source code.
                         
                         The trhsx preprocessor translates .hsx source files into ordinary .hs files. Literal
                         XML syntax is translated into function calls for creating XML values of the appropriate
@@ -30,7 +30,7 @@ Description:            HSX (Haskell Source with XML) allows literal XML syntax 
 Homepage:               http://patch-tag.com/r/nibro/hsx
 
 Tested-With:            GHC==6.8.3, GHC==6.10.1
-Cabal-Version: 		>= 1.2.3
+Cabal-Version: 		>= 1.6
 Build-Type:             Simple
 
 source-repository head
