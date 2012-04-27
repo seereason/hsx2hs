@@ -1912,6 +1912,7 @@ metaGenEElement name ats mat =
 
 -- | Create an attribute by applying the overloaded @asAttr@
 metaAsAttr :: Exp -> Exp
+metaAsAttr e@(Lit (String _)) = metaFunction "asAttr" [ExpTypeSig noLoc e (TyCon (UnQual (Ident "String")))]
 metaAsAttr e = metaFunction "asAttr" [e]
 
 argAsAttr :: Exp
