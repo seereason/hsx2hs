@@ -407,8 +407,10 @@ transform3exp e1 e2 e3 f = do e1' <- transformExpM e1
 
 mkAttr :: XAttr -> Exp
 mkAttr (XAttr name e) =
-    paren (metaMkName name `metaAssign` e)
-
+    paren (metaMkName name `metaAssign` (stringTypeSig e))
+    where
+      stringTypeSig e@(Lit (String _)) = ExpTypeSig noLoc e (TyCon (UnQual (Ident "String")))
+      stringTypeSig e                  = e
 
 -- | Transform pattern bind declarations inside a @let@-expression by transforming
 -- subterms that could appear as regular patterns, as well as transforming the bound
@@ -1952,5 +1954,8 @@ metaPcdata s = metaConPat "CDATA" [strP s]
 
 metaMkName :: XName -> Exp
 metaMkName n = case n of
-    XName s      -> strE s
-    XDomName d s -> tuple [strE d, strE s]
+    XName s      -> stringTypeSig (strE s)
+    XDomName d s -> tuple [stringTypeSig $ strE d, stringTypeSig $ strE s]
+    where
+      stringTypeSig e = ExpTypeSig noLoc e (TyCon (UnQual (Ident "String")))
+
