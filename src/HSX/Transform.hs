@@ -1923,7 +1923,7 @@ argAsAttr = var $ name "asAttr"
 -- | Create a property from an attribute and a value.
 metaAssign :: Exp -> Exp -> Exp
 metaAssign e1 e2 = infixApp e1 assignOp e2
-  where assignOp = QVarOp $ UnQual $ Symbol ":="
+  where assignOp = QConOp $ UnQual $ Symbol ":="
 
 -- | Make xml out of some expression by applying the overloaded function
 -- @asChild@.
