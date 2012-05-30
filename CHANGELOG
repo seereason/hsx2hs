@@ -1,3 +1,12 @@
+0.10.2 --> 0.10.3
+=================
+
+* Explicit signatures are added to String attributes and attribute
+  names, to play nice with OverloadedStrings (thanks Jeremy Shaw).
+
+* Bug fix where HSX.Transform treated := as a QVarOp instead of
+  QConOp (thanks again Jeremy).
+
 0.10.1 --> 0.10.2
 =================
 
