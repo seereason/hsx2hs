@@ -340,7 +340,7 @@ transformExpM e = case e of
             -- can then be transformed in the normal way.
             e = if null rns then rhs else caseE texp [alt1]
         rhs' <- transformExpM e
-        return $ Lambda s ps rhs'
+        return $ Proc s ps rhs'
     -- All other expressions simply transform their immediate subterms.
     InfixApp e1 op e2 -> transform2exp e1 e2
                                 (\e1 e2 -> InfixApp e1 op e2)
