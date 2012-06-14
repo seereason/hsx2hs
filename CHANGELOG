@@ -1,3 +1,8 @@
+0.10.3 --> 0.10.4
+=================
+
+* Fix a bug where Proc was incorrectly translated into Lambda.
+
 0.10.2 --> 0.10.3
 =================
 
