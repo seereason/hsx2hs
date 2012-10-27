@@ -1,22 +1,22 @@
 {-# LANGUAGE CPP #-}
 module Main where
 
-import Language.Haskell.Exts hiding (parse)
-import Prelude hiding (readFile, writeFile)
-import System.IO.UTF8 (readFile, writeFile,hPutStrLn)
-import System.IO (stderr)
-import HSX.Transform
-import System.Exit (exitFailure)
-
-import System.Environment (getArgs)
-import Data.List (isPrefixOf)
 #ifdef BASE4
-import Control.OldException (handle,ErrorCall(..))
+import Control.OldException           (handle,ErrorCall(..))
 #else
-import Control.Exception (handle,ErrorCall(..))
+import Control.Exception              (handle,ErrorCall(..))
 #endif
-  
-showSrcLoc (SrcLoc {srcFilename=srcFilename,srcLine=srcLine,srcColumn=srcColumn}) = 
+import Data.List                      (isPrefixOf)
+import Prelude                        hiding (readFile, writeFile)
+import Language.Haskell.Exts          hiding (parse)
+import Language.Haskell.HSX.Transform (transform)
+import System.Exit                    (exitFailure)
+import System.Environment             (getArgs)
+import System.IO.UTF8                 (readFile, writeFile,hPutStrLn)
+import System.IO                      (stderr)
+
+showSrcLoc :: SrcLoc -> String
+showSrcLoc (SrcLoc {srcFilename=srcFilename,srcLine=srcLine,srcColumn=srcColumn}) =
   srcFilename ++ ":" ++ show srcLine ++ ":" ++ show srcColumn
 
 checkParse :: ParseResult b -> b
@@ -68,8 +68,9 @@ parse fn fc = parseModuleWithMode (ParseMode fn allExtensions False True (Just b
   where fcuc= unlines $ filter (not . isPrefixOf "#") $ lines fc
 
 usageString :: String
-usageString = "Usage: trhsx <infile> [<outfile>]"
+usageString = "Usage: hsx2hs <infile> [<outfile>]"
 
+allExtensions :: [Extension]
 allExtensions = [RecursiveDo,ParallelListComp,MultiParamTypeClasses,FunctionalDependencies,RankNTypes,ExistentialQuantification,
                     ScopedTypeVariables,ImplicitParams,FlexibleContexts,FlexibleInstances,EmptyDataDecls,KindSignatures,
                     BangPatterns,TemplateHaskell,ForeignFunctionInterface,Arrows,Generics,NamedFieldPuns,PatternGuards,

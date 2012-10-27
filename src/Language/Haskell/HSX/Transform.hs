@@ -1,10 +1,10 @@
 -----------------------------------------------------------------------------
 -- |
--- Module      :  HSX.Tranform
--- Copyright   :  (c) Niklas Broberg 2004-2009
+-- Module      :  Language.Haskell.HSX.Tranform
+-- Copyright   :  (c) Niklas Broberg 2004-2012
 -- License     :  BSD-style (see the file LICENSE.txt)
 --
--- Maintainer  :  Niklas Broberg, niklas.broberg@chalmers.se
+-- Maintainer  :  Niklas Broberg, niklas.broberg@gmail.com
 -- Stability   :  experimental
 -- Portability :  portable
 --
@@ -13,7 +13,7 @@
 -- other words, we transform away regular patterns.
 -----------------------------------------------------------------------------
 
-module HSX.Transform (
+module Language.Haskell.HSX.Transform (
       transform       -- :: HsModule -> HsModule
     , transformExp
     ) where
