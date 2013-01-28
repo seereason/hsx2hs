@@ -44,7 +44,7 @@ Library
   Build-depends:	mtl              >= 2.0 && < 2.2,
                         haskell-src-exts >= 1.13,
                         haskell-src-meta >= 0.6 && < 0.7,
-                        template-haskell == 2.7.*,
+                        template-haskell >= 2.7 && < 2.9,
                         utf8-string      == 0.3.*
 
   if flag(base4)
