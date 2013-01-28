@@ -267,7 +267,7 @@ transformExpM e = case e of
 
     -- PCDATA should be lifted as a string into the XML datatype.
     XPcdata pcdata    -> do setXmlTransformed
-                            return $ ExpTypeSig noLoc (strE pcdata) (TyCon (UnQual (Ident "String")))
+                            return $ ExpTypeSig noLoc (strE pcdata) (TyCon (UnQual (Ident "Text")))
     -- Escaped expressions should be treated as just expressions.
     XExpTag e     -> do setXmlTransformed
                         e' <- transformExpM e
@@ -408,10 +408,10 @@ transform3exp e1 e2 e3 f = do e1' <- transformExpM e1
 
 mkAttr :: XAttr -> Exp
 mkAttr (XAttr name e) =
-    paren (metaMkName name `metaAssign` (stringTypeSig e))
+    paren (metaMkName name `metaAssign` (textTypeSig e))
     where
-      stringTypeSig e@(Lit (String _)) = ExpTypeSig noLoc e (TyCon (UnQual (Ident "String")))
-      stringTypeSig e                  = e
+      textTypeSig e@(Lit (String _)) = ExpTypeSig noLoc e (TyCon (UnQual (Ident "Text")))
+      textTypeSig e                  = e
 
 -- | Transform pattern bind declarations inside a @let@-expression by transforming
 -- subterms that could appear as regular patterns, as well as transforming the bound
@@ -1915,7 +1915,7 @@ metaGenEElement name ats mat =
 
 -- | Create an attribute by applying the overloaded @asAttr@
 metaAsAttr :: Exp -> Exp
-metaAsAttr e@(Lit (String _)) = metaFunction "asAttr" [ExpTypeSig noLoc e (TyCon (UnQual (Ident "String")))]
+metaAsAttr e@(Lit (String _)) = metaFunction "asAttr" [ExpTypeSig noLoc e (TyCon (UnQual (Ident "Text")))]
 metaAsAttr e = metaFunction "asAttr" [e]
 
 argAsAttr :: Exp
@@ -1955,8 +1955,8 @@ metaPcdata s = metaConPat "CDATA" [strP s]
 
 metaMkName :: XName -> Exp
 metaMkName n = case n of
-    XName s      -> stringTypeSig (strE s)
-    XDomName d s -> tuple [stringTypeSig $ strE d, stringTypeSig $ strE s]
+    XName s      -> textTypeSig (strE s)
+    XDomName d s -> tuple [textTypeSig $ strE d, textTypeSig $ strE s]
     where
-      stringTypeSig e = ExpTypeSig noLoc e (TyCon (UnQual (Ident "String")))
+      textTypeSig e = ExpTypeSig noLoc e (TyCon (UnQual (Ident "Text")))
 
