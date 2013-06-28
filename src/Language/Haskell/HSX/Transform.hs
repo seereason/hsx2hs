@@ -267,7 +267,8 @@ transformExpM e = case e of
 
     -- PCDATA should be lifted as a string into the XML datatype.
     XPcdata pcdata    -> do setXmlTransformed
-                            return $ ExpTypeSig noLoc (strE pcdata) (TyCon (UnQual (Ident "Text")))
+                            return $ metaFromStringLit $ strE pcdata
+--                            return $ ExpTypeSig noLoc (strE pcdata) (TyCon (UnQual (Ident "Text")))
     -- Escaped expressions should be treated as just expressions.
     XExpTag e     -> do setXmlTransformed
                         e' <- transformExpM e
@@ -410,7 +411,8 @@ mkAttr :: XAttr -> Exp
 mkAttr (XAttr name e) =
     paren (metaMkName name `metaAssign` (textTypeSig e))
     where
-      textTypeSig e@(Lit (String _)) = ExpTypeSig noLoc e (TyCon (UnQual (Ident "Text")))
+      textTypeSig e@(Lit (String _)) = metaFromStringLit e
+--      textTypeSig e@(Lit (String _)) = ExpTypeSig noLoc e (TyCon (UnQual (Ident "Text")))
       textTypeSig e                  = e
 
 -- | Transform pattern bind declarations inside a @let@-expression by transforming
@@ -1899,7 +1901,7 @@ metaMkPcdata s = metaFunction "pcdata" [strE s]
 metaGenElement :: XName -> [Exp] -> Maybe Exp -> [Exp] -> Exp
 metaGenElement name ats mat cs =
     let (d,n) = xNameParts name
-        ne    = tuple [metaMkMaybe $ fmap strE d, strE n]
+        ne    = tuple [metaMkMaybe $ fmap (metaFromStringLit . strE) d, metaFromStringLit $ strE n]
         m = maybe id (\x y -> paren $ y `metaAppend` (metaMap [argAsAttr, x])) mat
         attrs = m $ listE $ map metaAsAttr ats
      in metaFunction "genElement" [ne, attrs, listE cs]
@@ -1908,14 +1910,14 @@ metaGenElement name ats mat cs =
 metaGenEElement :: XName -> [Exp] -> Maybe Exp -> Exp
 metaGenEElement name ats mat =
     let (d,n) = xNameParts name
-        ne    = tuple [metaMkMaybe $ fmap strE d, strE n]
+        ne    = tuple [metaMkMaybe $ fmap (metaFromStringLit . strE) d, metaFromStringLit $ strE n]
         m = maybe id (\x y -> paren $ y `metaAppend` (metaMap [argAsAttr, x])) mat
         attrs = m $ listE $ map metaAsAttr ats
      in metaFunction "genEElement" [ne, attrs]
 
 -- | Create an attribute by applying the overloaded @asAttr@
 metaAsAttr :: Exp -> Exp
-metaAsAttr e@(Lit (String _)) = metaFunction "asAttr" [ExpTypeSig noLoc e (TyCon (UnQual (Ident "Text")))]
+metaAsAttr e@(Lit (String _)) = metaFunction "asAttr" [metaFromStringLit e] -- [ExpTypeSig noLoc e (TyCon (UnQual (Ident "Text")))]
 metaAsAttr e = metaFunction "asAttr" [e]
 
 argAsAttr :: Exp
@@ -1931,6 +1933,9 @@ metaAssign e1 e2 = infixApp e1 assignOp e2
 metaAsChild :: Exp -> Exp
 metaAsChild e = metaFunction "asChild" [paren e]
 
+-- | convert a 'String' literal to lazy 'Text' by calling a function named 'fromStringLit'
+metaFromStringLit :: Exp -> Exp
+metaFromStringLit e = metaFunction "fromStringLit" [e]
 
 -- TODO: We need to fix the stuff below so pattern matching on XML could also be overloaded.
 -- Right now it only works on HSP XML, or anything that is syntactically identical to it.
@@ -1955,8 +1960,11 @@ metaPcdata s = metaConPat "CDATA" [strP s]
 
 metaMkName :: XName -> Exp
 metaMkName n = case n of
-    XName s      -> textTypeSig (strE s)
-    XDomName d s -> tuple [textTypeSig $ strE d, textTypeSig $ strE s]
-    where
-      textTypeSig e = ExpTypeSig noLoc e (TyCon (UnQual (Ident "Text")))
+    XName s      -> metaFromStringLit (strE s)
+    XDomName d s -> tuple [metaFromStringLit $ strE d, metaFromStringLit $ strE s]
+
+--    XName s      -> textTypeSig (strE s)
+--    XDomName d s -> tuple [textTypeSig $ strE d, textTypeSig $ strE s]
+--    where
+--      textTypeSig e = ExpTypeSig noLoc e (TyCon (UnQual (Ident "Text")))
 
