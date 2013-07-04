@@ -27,7 +27,7 @@ Description:            HSX (Haskell Source with XML) allows literal XML syntax 
                         Achieving that is not as simple as it may seem, but the XMLGenerator module provides all the
                         necessary machinery.
                         
-Homepage:               http://patch-tag.com/r/nibro/hsx
+Homepage:               http://hub.darcs.net/nibro/hsx2hs
 
 Tested-With:            GHC==6.8.3, GHC==6.10.1
 Cabal-Version: 		>= 1.6
@@ -35,7 +35,7 @@ Build-Type:             Simple
 
 source-repository head
     type:     darcs
-    location: http://patch-tag.com/r/nibro/hsx
+    location: http://hub.darcs.net/nibro/hsx2hs
 
 
 Flag base4
