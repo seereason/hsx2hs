@@ -66,10 +66,10 @@ parseHsExp :: String -> Either String Hs.Exp
 parseHsExp = either Left (Right . transformExp) . parseResultToEither . parseExpWithMode parseMode
 
 parseMode :: ParseMode
-parseMode = ParseMode "" allExtensions False True (Just baseFixities)
+parseMode = ParseMode "" Haskell2010 allExtensions False True (Just baseFixities)
 
 allExtensions :: [Extension]
-allExtensions =
+allExtensions = map EnableExtension
     [RecursiveDo,ParallelListComp,MultiParamTypeClasses,FunctionalDependencies,RankNTypes,ExistentialQuantification,
      ScopedTypeVariables,ImplicitParams,FlexibleContexts,FlexibleInstances,EmptyDataDecls,KindSignatures,
      BangPatterns,TemplateHaskell,ForeignFunctionInterface,Arrows,Generics,NamedFieldPuns,PatternGuards,

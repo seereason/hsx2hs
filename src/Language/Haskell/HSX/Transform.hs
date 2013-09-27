@@ -349,7 +349,7 @@ transformExpM e = case e of
     App e1 e2         -> transform2exp e1 e2 App
     NegApp e          -> fmap NegApp $ transformExpM e
     If e1 e2 e3       -> transform3exp e1 e2 e3 If
-    Tuple es          -> fmap Tuple $ mapM transformExpM es
+    Tuple bx es       -> fmap (Tuple bx) $ mapM transformExpM es
     List es           -> fmap List $ mapM transformExpM es
     Paren e           -> fmap Paren $ transformExpM e
     LeftSection e op  -> do e' <- transformExpM e
@@ -694,7 +694,7 @@ renameRP p = case p of
                                 (\p1 p2 -> PInfixApp p1 n p2)
                                 renameRP
     PApp n ps         -> renameNpat ps (PApp n) renameRP
-    PTuple ps         -> renameNpat ps PTuple renameRP
+    PTuple bx ps      -> renameNpat ps (PTuple bx) renameRP
     PList ps          -> renameNpat ps PList renameRP
     PParen p          -> rename1pat p PParen renameRP
     PRec n pfs        -> renameNpat pfs (PRec n) renameRPf
@@ -758,7 +758,7 @@ renameIrrP p = case p of
                                 (\p1 p2 -> PInfixApp p1 n p2)
                                 renameIrrP
     PApp n ps         -> renameNpat ps (PApp n) renameIrrP
-    PTuple ps         -> renameNpat ps PTuple renameIrrP
+    PTuple bx ps      -> renameNpat ps (PTuple bx) renameIrrP
     PList ps          -> renameNpat ps PList renameIrrP
     PParen p          -> rename1pat p PParen renameIrrP
     PRec n pfs        -> renameNpat pfs (PRec n) renameIrrPf
@@ -986,7 +986,7 @@ trPattern s p = case p of
     PNeg q             -> tr1pat q PNeg (trPattern s)
     PInfixApp p1 op p2 -> tr2pat p1 p2 (\p1 p2 -> PInfixApp p1 op p2) (trPattern s)
     PApp n ps          -> trNpat ps (PApp n) (trPattern s)
-    PTuple ps          -> trNpat ps PTuple (trPattern s)
+    PTuple bx ps       -> trNpat ps (PTuple bx) (trPattern s)
     PList ps           -> trNpat ps PList (trPattern s)
     PParen p           -> tr1pat p PParen (trPattern s)
     PRec n pfs         -> trNpat pfs (PRec n) (trPatternField s)
@@ -1483,7 +1483,7 @@ trRPat s linear rp = case rp of
             PInfixApp p1 _ p2  -> gatherPVars p1 ++
                                          gatherPVars p2
             PApp _ ps          -> concatMap gatherPVars ps
-            PTuple ps          -> concatMap gatherPVars ps
+            PTuple _ ps        -> concatMap gatherPVars ps
             PList ps           -> concatMap gatherPVars ps
             PParen p           -> gatherPVars p
             PRec _ pfs         -> concatMap help pfs

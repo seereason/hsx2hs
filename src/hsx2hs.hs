@@ -64,14 +64,15 @@ process fp fc = prettyPrintWithMode (defaultMode {linePragmas=True}) $
                  transform $ checkParse $ parse fp fc
 
 parse :: String -> String -> ParseResult Module
-parse fn fc = parseModuleWithMode (ParseMode fn allExtensions False True (Just baseFixities)) fcuc
+parse fn fc = parseModuleWithMode (ParseMode fn Haskell2010 allExtensions False True (Just baseFixities)) fcuc
   where fcuc= unlines $ filter (not . isPrefixOf "#") $ lines fc
 
 usageString :: String
 usageString = "Usage: hsx2hs <infile> [<outfile>]"
 
 allExtensions :: [Extension]
-allExtensions = [RecursiveDo,ParallelListComp,MultiParamTypeClasses,FunctionalDependencies,RankNTypes,ExistentialQuantification,
+allExtensions = map EnableExtension
+                   [RecursiveDo,ParallelListComp,MultiParamTypeClasses,FunctionalDependencies,RankNTypes,ExistentialQuantification,
                     ScopedTypeVariables,ImplicitParams,FlexibleContexts,FlexibleInstances,EmptyDataDecls,KindSignatures,
                     BangPatterns,TemplateHaskell,ForeignFunctionInterface,Arrows,Generics,NamedFieldPuns,PatternGuards,
                     MagicHash,TypeFamilies,StandaloneDeriving,TypeOperators,RecordWildCards,GADTs,UnboxedTuples,
