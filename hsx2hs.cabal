@@ -1,5 +1,5 @@
 Name:                   hsx2hs
-Version:                0.13.1
+Version:                0.13.2
 License:                BSD3
 License-File:           LICENSE
 Author:                 Niklas Broberg, Joel Bjornson
@@ -29,7 +29,7 @@ Description:            HSX (Haskell Source with XML) allows literal XML syntax 
                         
 Homepage:               http://hub.darcs.net/nibro/hsx2hs
 
-Tested-With:            GHC==7.6.3
+Tested-With:            GHC==7.6.3, GHC==7.8.2
 Cabal-Version: 		>= 1.6
 Build-Type:             Simple
 
@@ -41,10 +41,10 @@ source-repository head
 Flag base4
 
 Library
-  Build-depends:	mtl              >= 2.0 && < 2.2,
-                        haskell-src-exts == 1.14.*,
-                        haskell-src-meta >= 0.6,
-                        template-haskell >= 2.7 && < 2.9,
+  Build-depends:	mtl              >= 2.0  && < 2.3,
+                        haskell-src-exts >= 1.14 && < 1.16,
+                        haskell-src-meta >= 0.6  && < 0.7,
+                        template-haskell >= 2.7  && < 2.10,
                         utf8-string      == 0.3.*
 
   if flag(base4)

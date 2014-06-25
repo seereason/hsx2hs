@@ -21,6 +21,8 @@ module Language.Haskell.HSX.Transform (
 import Language.Haskell.Exts.Syntax
 import Language.Haskell.Exts.Build
 import Language.Haskell.Exts.SrcLoc (noLoc)
+import Control.Applicative (Applicative(pure, (<*>)))
+import Control.Monad       (ap)
 import Data.List (union)
 
 import Debug.Trace (trace)
@@ -30,6 +32,10 @@ import Debug.Trace (trace)
 -- to signal whether a transformation has taken place or not.
 
 newtype HsxM a = MkHsxM (HsxState -> (a, HsxState))
+
+instance Applicative HsxM where
+  pure  = return
+  (<*>) = ap
 
 instance Monad HsxM where
  return x = MkHsxM (\s -> (x,s))
@@ -627,6 +633,10 @@ type RNState = Int
 
 initRNState = 0
 
+instance Applicative RN where
+  pure  = return
+  (<*>) = ap
+
 instance Monad RN where
  return a = RN $ \s -> (a,s)
  (RN f) >>= k = RN $ \s -> let (a,s') = f s
@@ -804,6 +814,10 @@ transformPatterns s ps = runTr (trPatterns s ps)
 type State = (Int, Int, Int, [Guard], [Guard], [Decl])
 
 newtype Tr a = Tr (State -> HsxM (a, State))
+
+instance Applicative Tr where
+  pure  = return
+  (<*>) = ap
 
 instance Monad Tr where
  return a = Tr $ \s -> return (a, s)
@@ -994,7 +1008,6 @@ trPattern s p = case p of
     PWildCard          -> return p
     PIrrPat p          -> tr1pat p PIrrPat (trPattern s)
     PatTypeSig s p t   -> tr1pat p (\p -> PatTypeSig s p t) (trPattern s)
-    PExplTypeArg _ _   -> return p
     PQuasiQuote _ _    -> return p
     PBangPat p         -> tr1pat p PBangPat (trPattern s)
     PNPlusK _ _        -> return p
