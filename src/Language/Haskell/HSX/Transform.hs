@@ -84,7 +84,7 @@ transform (Module s m pragmas warn mes is decls) =
     let (decls', (harp, hsx)) = runHsxM $ mapM transformDecl decls
         -- We may need to add an import for Match.hs that defines the matcher monad
         imps1 = if harp
-             then (:) $ ImportDecl s match_mod True False Nothing
+             then (:) $ ImportDecl s match_mod True False False Nothing
                             (Just match_qual_mod)
                             Nothing
              else id
@@ -104,7 +104,7 @@ transformDecl :: Decl -> HsxM Decl
 transformDecl d = case d of
     -- Pattern binds can contain regular patterns in the pattern being bound
     -- as well as on the right-hand side and in declarations in a where clause
-    PatBind srcloc pat mty rhs decls -> do
+    PatBind srcloc pat rhs decls -> do
         -- Preserve semantics of irrefutable regular patterns by postponing
         -- their evaluation to a let-expression on the right-hand side
         let ([pat'], rnpss) = unzip $ renameIrrPats [pat]
@@ -120,14 +120,14 @@ transformDecl d = case d of
                                return $ BDecls $ decls'' ++ ds'
                _           -> error "Cannot bind implicit parameters in the \
                         \ \'where\' clause of a function using regular patterns."
-        return $ PatBind srcloc pat'' mty rhs' decls'
+        return $ PatBind srcloc pat'' rhs' decls'
 
     -- Function binds can contain regular patterns in their matches
     FunBind ms -> fmap FunBind $ mapM transformMatch ms
     -- Instance declarations can contain regular patterns in the
     -- declarations of functions inside it
-    InstDecl s c n ts idecls ->
-        fmap (InstDecl s c n ts) $ mapM transformInstDecl idecls
+    InstDecl s mo tvbs c n ts idecls ->
+        fmap (InstDecl s mo tvbs c n ts) $ mapM transformInstDecl idecls
     -- Class declarations can contain regular patterns in the
     -- declarations of automatically instantiated functions
     ClassDecl s c n ns ds cdecls ->
@@ -442,7 +442,7 @@ transformLetDecls ds = do
         transformLDs k l ds = case ds of
             []     -> return []
             (d:ds) -> case d of
-                PatBind srcloc pat mty rhs decls -> do
+                PatBind srcloc pat rhs decls -> do
                     -- We need to transform all pattern bindings in a set of
                     -- declarations in the same context w.r.t. generating fresh
                     -- variable names, since they will all be in scope at the same time.
@@ -472,7 +472,7 @@ transformLetDecls ds = do
                     -- The generated guards, which should be at most one, should be
                     -- added as declarations rather than as guards due to the
                     -- scoping issue described above.
-                    return $ (PatBind srcloc pat' mty rhs' decls') : ags' ++ gs' ++ ds'
+                    return $ (PatBind srcloc pat' rhs' decls') : ags' ++ gs' ++ ds'
 
                     -- We only need to treat pattern binds separately, other declarations
                     -- can be transformed normally.
@@ -570,7 +570,7 @@ transformAlt (Alt srcloc pat rhs decls) = do
     ([pat''], attrGuards, guards, decls'') <- transformPatterns srcloc [pat']
     -- Transform the right-hand side, and add any generated guards
     -- and let expressions to it.
-    rhs' <- mkGAlts srcloc (attrGuards ++ guards) (concat rnpss) rhs
+    rhs' <- mkRhs srcloc (attrGuards ++ guards) (concat rnpss) rhs
     -- Transform declarations in the where clause, adding any generated
     -- declarations to it.
     decls' <- case decls of
@@ -580,35 +580,6 @@ transformAlt (Alt srcloc pat rhs decls) = do
                      \ \'where\' clause of a function using regular patterns."
 
     return $ Alt srcloc pat'' rhs' decls'
-
-    -- Transform and update guards and right-hand side of a case-expression.
-    -- The supplied list of guards is prepended to the original guards, and
-    -- subterms are traversed and transformed.
-  where mkGAlts :: SrcLoc -> [Guard] -> [(Name, Pat)] -> GuardedAlts -> HsxM GuardedAlts
-        mkGAlts s guards rnps (UnGuardedAlt rhs) = do
-            -- Add the postponed patterns to the right-hand side by placing
-            -- them in a let-expression to make them lazily evaluated.
-            -- Then transform the whole right-hand side as an expression.
-            rhs' <- transformExpM $ addLetDecls s rnps rhs
-            case guards of
-             -- There were no guards before, and none should be added,
-             -- so we still have an unguarded right-hand side
-             [] -> return $ UnGuardedAlt rhs'
-             -- There are guards to add. These should be added as pattern
-             -- guards, i.e. as statements.
-             _  -> return $ GuardedAlts [GuardedAlt s (map mkStmtGuard guards) rhs']
-        mkGAlts s gs rnps (GuardedAlts galts) =
-            fmap GuardedAlts $ mapM (mkGAlt gs rnps) galts
-          where mkGAlt :: [Guard] -> [(Name, Pat)] -> GuardedAlt -> HsxM GuardedAlt
-                mkGAlt gs rnps (GuardedAlt s oldgs rhs) = do
-                    -- Add the postponed patterns to the right-hand side by placing
-                    -- them in a let-expression to make them lazily evaluated.
-                    -- Then transform the whole right-hand side as an expression.
-                    rhs'   <- transformExpM $ addLetDecls s rnps rhs
-                    -- Now there are guards, so first we need to transform those
-                    oldgs' <- fmap concat $ mapM (transformStmt GuardStmt) oldgs
-                    -- ... and then prepend the newly generated ones, as statements
-                    return $ GuardedAlt s ((map mkStmtGuard gs) ++ oldgs') rhs'
 
 ----------------------------------------------------------------------------------
 -- Guards
@@ -699,7 +670,6 @@ renameRP p = case p of
     PXETag _ _ _ _    -> rename p
     -- The rest of the rules simply try to rename regular patterns in
     -- their immediate subpatterns.
-    PNeg p            -> rename1pat p PNeg renameRP
     PInfixApp p1 n p2 -> rename2pat p1 p2
                                 (\p1 p2 -> PInfixApp p1 n p2)
                                 renameRP
@@ -741,12 +711,12 @@ renameLetDecls ds =
   where renameLetDecl :: Decl -> RN (Decl, [(SrcLoc, Name, Pat)])
         renameLetDecl d = case d of
             -- We need only bother about pattern bindings.
-            PatBind srcloc pat mty rhs decls -> do
+            PatBind srcloc pat rhs decls -> do
                 -- Rename any regular patterns that appear in the
                 -- pattern being bound.
                 (p, ms) <- renameRP pat
                 let sms = map (\(n,p) -> (srcloc, n, p)) ms
-                return $ (PatBind srcloc p mty rhs decls, sms)
+                return $ (PatBind srcloc p rhs decls, sms)
             _ -> return (d, [])
 
 
@@ -763,7 +733,6 @@ renameIrrP p = case p of
                         return $ (PIrrPat q, ms)
     -- The rest of the rules simply try to rename regular patterns in
     -- irrefutable patterns in their immediate subpatterns.
-    PNeg p            -> rename1pat p PNeg renameIrrP
     PInfixApp p1 n p2 -> rename2pat p1 p2
                                 (\p1 p2 -> PInfixApp p1 n p2)
                                 renameIrrP
@@ -996,8 +965,7 @@ trPattern s p = case p of
         e' <- liftTr $ transformExpM e
         tr1pat p (PViewPat e') (trPattern s)
     PVar _             -> return p
-    PLit _             -> return p
-    PNeg q             -> tr1pat q PNeg (trPattern s)
+    PLit _ _           -> return p
     PInfixApp p1 op p2 -> tr2pat p1 p2 (\p1 p2 -> PInfixApp p1 op p2) (trPattern s)
     PApp n ps          -> trNpat ps (PApp n) (trPattern s)
     PTuple bx ps       -> trNpat ps (PTuple bx) (trPattern s)
@@ -1492,7 +1460,6 @@ trRPat s linear rp = case rp of
     gatherPVars :: Pat -> [Name]
     gatherPVars p = case p of
             PVar v             -> [v]
-            PNeg q             -> gatherPVars q
             PInfixApp p1 _ p2  -> gatherPVars p1 ++
                                          gatherPVars p2
             PApp _ ps          -> concatMap gatherPVars ps
