@@ -7,13 +7,17 @@ import Control.OldException           (handle,ErrorCall(..))
 import Control.Exception              (handle,ErrorCall(..))
 #endif
 import Data.List                      (isPrefixOf)
-import Prelude                        hiding (readFile, writeFile)
 import Language.Haskell.Exts          hiding (parse)
 import Language.Haskell.HSX.Transform (transform)
 import System.Exit                    (exitFailure)
 import System.Environment             (getArgs)
+#if MIN_VERSION_utf8_string(1,0,0)
+import System.IO                      (hPutStrLn, stderr)
+#else
+import Prelude                        hiding (readFile, writeFile)
 import System.IO.UTF8                 (readFile, writeFile,hPutStrLn)
 import System.IO                      (stderr)
+#endif
 
 showSrcLoc :: SrcLoc -> String
 showSrcLoc (SrcLoc {srcFilename=srcFilename,srcLine=srcLine,srcColumn=srcColumn}) =
