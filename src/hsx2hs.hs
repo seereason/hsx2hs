@@ -7,16 +7,30 @@ import Control.OldException           (handle,ErrorCall(..))
 import Control.Exception              (handle,ErrorCall(..))
 #endif
 import Data.List                      (isPrefixOf)
+import Prelude                        hiding (readFile, writeFile)
 import Language.Haskell.Exts          hiding (parse)
 import Language.Haskell.HSX.Transform (transform)
 import System.Exit                    (exitFailure)
 import System.Environment             (getArgs)
 #if MIN_VERSION_utf8_string(1,0,0)
-import System.IO                      (hPutStrLn, stderr)
+import qualified Data.ByteString as BS (readFile, writeFile)
+import Data.ByteString.UTF8           (fromString, toString)
+import System.IO                      (hPutStrLn, stderr, hSetEncoding, utf8, withBinaryFile, IOMode(ReadMode, WriteMode), hGetContents)
 #else
-import Prelude                        hiding (readFile, writeFile)
-import System.IO.UTF8                 (readFile, writeFile,hPutStrLn)
+import qualified System.IO.UTF8 as UTF8 (readFile, writeFile, hPutStrLn)
 import System.IO                      (stderr)
+#endif
+
+#if MIN_VERSION_utf8_string(1,0,0)
+readFile :: FilePath -> IO String
+readFile path = BS.readFile path >>= return . toString
+writeFile :: FilePath -> String -> IO ()
+writeFile path s = BS.writeFile path (fromString s)
+#else
+readFile :: FilePath -> IO String
+readFile = UTF8.readfile
+writeFile :: FilePath -> String -> IO ()
+writeFile = UTF8.writeFile
 #endif
 
 showSrcLoc :: SrcLoc -> String

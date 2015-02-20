@@ -45,6 +45,7 @@ Library
                         haskell-src-exts >= 1.16 && < 1.17,
                         haskell-src-meta >= 0.6  && < 0.7,
                         template-haskell >= 2.7  && < 2.10,
+                        bytestring,
                         utf8-string      >= 0.3  && < 1.1
 
   if flag(base4)
