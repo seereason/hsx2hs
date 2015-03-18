@@ -21,6 +21,8 @@ before_install:
 
 install:
  - travis_retry cabal update
+ - travis_retry git clone https://github.com/seereason/haskell-src-meta
+ - cabal install -j2 ./haskell-src-meta
  - cabal install --only-dependencies --enable-tests --constraint="Cabal==$CABALVER.*"
 
 script:
