@@ -1,5 +1,5 @@
 Name:                   hsx2hs
-Version:                0.13.3
+Version:                0.13.3.1
 License:                BSD3
 License-File:           LICENSE
 Author:                 Niklas Broberg, Joel Bjornson
@@ -32,6 +32,7 @@ Homepage:               https://github.com/seereason/hsx2hs
 Tested-With:            GHC==7.6.3, GHC==7.8.2
 Cabal-Version: 		>= 1.6
 Build-Type:             Simple
+Extra-source-files:     .travis.yml
 
 source-repository head
     type:     git

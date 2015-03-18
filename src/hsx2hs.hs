@@ -15,7 +15,7 @@ import System.Environment             (getArgs)
 #if MIN_VERSION_utf8_string(1,0,0)
 import qualified Data.ByteString as BS (readFile, writeFile)
 import Data.ByteString.UTF8           (fromString, toString)
-import System.IO                      (hPutStrLn, stderr, hSetEncoding, utf8, withBinaryFile, IOMode(ReadMode, WriteMode), hGetContents)
+import System.IO as UTF8              (hPutStrLn, stderr, hSetEncoding, utf8, withBinaryFile, IOMode(ReadMode, WriteMode), hGetContents)
 #else
 import qualified System.IO.UTF8 as UTF8 (readFile, writeFile, hPutStrLn)
 import System.IO                      (stderr)
@@ -28,7 +28,7 @@ writeFile :: FilePath -> String -> IO ()
 writeFile path s = BS.writeFile path (fromString s)
 #else
 readFile :: FilePath -> IO String
-readFile = UTF8.readfile
+readFile = UTF8.readFile
 writeFile :: FilePath -> String -> IO ()
 writeFile = UTF8.writeFile
 #endif
@@ -70,7 +70,7 @@ testParse file = do
 
 main :: IO ()
 main = do args <- getArgs
-          handle (\(ErrorCall text) -> hPutStrLn stderr text >> exitFailure ) $
+          handle (\(ErrorCall text) -> UTF8.hPutStrLn stderr text >> exitFailure ) $
            case args of
             [origfile, infile, outfile] -> transformFile origfile infile outfile
             [infile, outfile] -> transformFile infile infile outfile
