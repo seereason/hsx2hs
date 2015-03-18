@@ -1,22 +1,22 @@
 language: haskell
 before_install:
 env:
- - GHCVER=7.4.2 CABALVER=1.18
- - GHCVER=7.6.3 CABALVER=1.18
- - GHCVER=7.8.4 CABALVER=1.22
- - GHCVER=7.10.1 CABALVER=1.22
- - GHCVER=head  CABALVER=head
+ - GHCVER=7.4.2 CABALVER=1.18 HAPPYVER=1.19.4 ALEXVER=3.1.3
+ - GHCVER=7.6.3 CABALVER=1.18 HAPPYVER=1.19.4 ALEXVER=3.1.3
+ - GHCVER=7.8.4 CABALVER=1.22 HAPPYVER=1.19.4 ALEXVER=3.1.3
+ - GHCVER=7.10.1 CABALVER=1.22 HAPPYVER=1.19.4 ALEXVER=3.1.3
+ - GHCVER=head  CABALVER=head HAPPYVER=1.19.4 ALEXVER=3.1.3
 
 matrix:
   allow_failures:
-   - env: GHCVER=7.10.1 CABALVER=1.22
-   - env: GHCVER=head  CABALVER=head
+   - env: GHCVER=7.10.1 CABALVER=1.22 HAPPYVER=1.19.4 ALEXVER=3.1.3
+   - env: GHCVER=head  CABALVER=head HAPPYVER=1.19.4 ALEXVER=3.1.3
 
 before_install:
  - travis_retry sudo add-apt-repository -y ppa:hvr/ghc
  - travis_retry sudo apt-get update
- - travis_retry sudo apt-get install cabal-install-$CABALVER ghc-$GHCVER
- - export PATH=/opt/ghc/$GHCVER/bin:/opt/cabal/$CABALVER/bin:$HOME/.cabal/bin:$PATH
+ - travis_retry sudo apt-get install cabal-install-$CABALVER ghc-$GHCVER happy-$HAPPYVER alex-$ALEXVER
+ - export PATH=/opt/ghc/$GHCVER/bin:/opt/cabal/$CABALVER/bin:/opt/happy/$HAPPYVER/bin:/opt/alex/$ALEXVER/bin:$HOME/.cabal/bin:$PATH
  - cabal --version
 
 install:
