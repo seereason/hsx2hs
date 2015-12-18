@@ -1,31 +1,12 @@
 language: haskell
-before_install:
-env:
- - GHCVER=7.4.2 CABALVER=1.18 HAPPYVER=1.19.4 ALEXVER=3.1.3
- - GHCVER=7.6.3 CABALVER=1.18 HAPPYVER=1.19.4 ALEXVER=3.1.3
- - GHCVER=7.8.4 CABALVER=1.22 HAPPYVER=1.19.4 ALEXVER=3.1.3
- - GHCVER=7.10.1 CABALVER=1.22 HAPPYVER=1.19.4 ALEXVER=3.1.3
- - GHCVER=head  CABALVER=head HAPPYVER=1.19.4 ALEXVER=3.1.3
+sudo: false
 
-matrix:
-  allow_failures:
-   - env: GHCVER=7.10.1 CABALVER=1.22 HAPPYVER=1.19.4 ALEXVER=3.1.3
-   - env: GHCVER=head  CABALVER=head HAPPYVER=1.19.4 ALEXVER=3.1.3
+ghc:
+  - 7.4
+  - 7.6
+  - 7.8
+  - "7.10"
 
 before_install:
- - travis_retry sudo add-apt-repository -y ppa:hvr/ghc
- - travis_retry sudo apt-get update
- - travis_retry sudo apt-get install cabal-install-$CABALVER ghc-$GHCVER happy-$HAPPYVER alex-$ALEXVER
- - export PATH=/opt/ghc/$GHCVER/bin:/opt/cabal/$CABALVER/bin:/opt/happy/$HAPPYVER/bin:/opt/alex/$ALEXVER/bin:$HOME/.cabal/bin:$PATH
- - cabal --version
-
-install:
  - travis_retry cabal update
- - travis_retry git clone https://github.com/seereason/haskell-src-meta
- - cabal install -j2 ./haskell-src-meta
- - cabal install --only-dependencies --enable-tests --constraint="Cabal==$CABALVER.*"
-
-script:
- - cabal configure --enable-tests
- - cabal build
- - cabal test
+ - cabal install happy
