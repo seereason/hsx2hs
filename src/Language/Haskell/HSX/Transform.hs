@@ -13,6 +13,8 @@
 -- other words, we transform away regular patterns.
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE CPP #-}
+
 module Language.Haskell.HSX.Transform (
       transform       -- :: HsModule -> HsModule
     , transformExp
@@ -116,8 +118,14 @@ transformDecl d = case d of
         -- Transform declarations in the where clause, adding any generated
         -- declarations to it
         decls' <- case decls of
+#if MIN_VERSION_haskell_src_exts(1,17,0)
+               Just (BDecls ds)
+                         -> do ds' <- transformLetDecls ds
+                               return $ Just $ BDecls $ decls'' ++ ds'
+#else
                BDecls ds -> do ds' <- transformLetDecls ds
                                return $ BDecls $ decls'' ++ ds'
+#endif
                _           -> error "Cannot bind implicit parameters in the \
                         \ \'where\' clause of a function using regular patterns."
         return $ PatBind srcloc pat'' rhs' decls'
@@ -170,8 +178,14 @@ transformMatch (Match srcloc name pats mty rhs decls) = do
     -- Transform declarations in the where clause, adding any generated
     -- declarations to it
     decls' <- case decls of
+#if MIN_VERSION_haskell_src_exts(1,17,0)
+           Just (BDecls ds)
+                     -> do ds' <- transformLetDecls ds
+                           return $ Just $ BDecls $ decls'' ++ ds'
+#else
            BDecls ds -> do ds' <- transformLetDecls ds
                            return $ BDecls $ decls'' ++ ds'
+#endif
            _           -> error "Cannot bind implicit parameters in the \
                      \ \'where\' clause of a function using regular patterns."
 
@@ -451,10 +465,18 @@ transformLetDecls ds = do
                         -- Any declarations already in place should be left where they
                         -- are since they probably refer to the generating right-hand
                         -- side of the pattern bind. If they don't, we're in trouble...
+#if MIN_VERSION_haskell_src_exts(1,17,0)
+                        Just (BDecls decls) -> fmap (Just . BDecls) $ transformLetDecls decls
+#else
                         BDecls decls -> fmap BDecls $ transformLetDecls decls
+#endif
                         -- If they are implicit parameter bindings we simply transform
                         -- them as such.
+#if MIN_VERSION_haskell_src_exts(1,17,0)
+                        Just (IPBinds decls) -> fmap (Just . IPBinds) $ mapM transformIPBind decls
+#else
                         IPBinds decls -> fmap IPBinds $ mapM transformIPBind decls
+#endif
                     -- The generated guard, if any, should be a declaration, and the
                     -- generated declarations should be associated with it.
                     let gs' = case gs of
@@ -574,8 +596,13 @@ transformAlt (Alt srcloc pat rhs decls) = do
     -- Transform declarations in the where clause, adding any generated
     -- declarations to it.
     decls' <- case decls of
+#if MIN_VERSION_haskell_src_exts(1,17,0)
+           Just (BDecls ds) -> do ds' <- mapM transformDecl ds
+                                  return $ Just $ BDecls $ decls'' ++ ds
+#else
            BDecls ds -> do ds' <- mapM transformDecl ds
                            return $ BDecls $ decls'' ++ ds
+#endif
            _           -> error "Cannot bind implicit parameters in the \
                      \ \'where\' clause of a function using regular patterns."
 
@@ -1191,7 +1218,11 @@ trRPat s linear rp = case rp of
                         -- match the given pattern
                         let alt1 = altGW s p gs                 -- foo -> Just (mf foo)
                                     (app (con just_name) $
+#if MIN_VERSION_haskell_src_exts(1,17,0)
+                                     tuple (map (retVar b) vs)) (binds [])
+#else
                                      tuple (map (retVar b) vs)) noBinds
+#endif
                             -- .. and finally an alternative for not matching the pattern.
                             alt2 = alt s wildcard (con nothing_name)        -- _ -> Nothing
                             -- ... and that pattern could itself contain regular patterns

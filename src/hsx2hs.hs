@@ -82,7 +82,11 @@ process fp fc = prettyPrintWithMode (defaultMode {linePragmas=True}) $
                  transform $ checkParse $ parse fp fc
 
 parse :: String -> String -> ParseResult Module
-parse fn fc = parseModuleWithMode (ParseMode fn Haskell2010 allExtensions False True (Just baseFixities)) fcuc
+parse fn fc = parseModuleWithMode (ParseMode fn Haskell2010 allExtensions False True (Just baseFixities)
+#if MIN_VERSION_haskell_src_exts(1,17,0)
+                                             False
+#endif
+                                             ) fcuc
   where fcuc= unlines $ filter (not . isPrefixOf "#") $ lines fc
 
 usageString :: String

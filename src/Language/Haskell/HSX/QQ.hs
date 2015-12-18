@@ -67,6 +67,9 @@ parseHsExp = either Left (Right . transformExp) . parseResultToEither . parseExp
 
 parseMode :: ParseMode
 parseMode = ParseMode "" Haskell2010 allExtensions False True (Just baseFixities)
+#if MIN_VERSION_haskell_src_exts(1,17,0)
+                      False
+#endif
 
 allExtensions :: [Extension]
 allExtensions = map EnableExtension
