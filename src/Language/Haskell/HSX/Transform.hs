@@ -119,6 +119,7 @@ transformDecl d = case d of
         -- declarations to it
         decls' <- case decls of
 #if MIN_VERSION_haskell_src_exts(1,17,0)
+               Nothing -> return Nothing
                Just (BDecls ds)
                          -> do ds' <- transformLetDecls ds
                                return $ Just $ BDecls $ decls'' ++ ds'
@@ -179,6 +180,7 @@ transformMatch (Match srcloc name pats mty rhs decls) = do
     -- declarations to it
     decls' <- case decls of
 #if MIN_VERSION_haskell_src_exts(1,17,0)
+           Nothing -> return Nothing
            Just (BDecls ds)
                      -> do ds' <- transformLetDecls ds
                            return $ Just $ BDecls $ decls'' ++ ds'
@@ -466,6 +468,7 @@ transformLetDecls ds = do
                         -- are since they probably refer to the generating right-hand
                         -- side of the pattern bind. If they don't, we're in trouble...
 #if MIN_VERSION_haskell_src_exts(1,17,0)
+                        Nothing -> return Nothing
                         Just (BDecls decls) -> fmap (Just . BDecls) $ transformLetDecls decls
 #else
                         BDecls decls -> fmap BDecls $ transformLetDecls decls
@@ -597,6 +600,7 @@ transformAlt (Alt srcloc pat rhs decls) = do
     -- declarations to it.
     decls' <- case decls of
 #if MIN_VERSION_haskell_src_exts(1,17,0)
+           Nothing -> return Nothing
            Just (BDecls ds) -> do ds' <- mapM transformDecl ds
                                   return $ Just $ BDecls $ decls'' ++ ds
 #else
