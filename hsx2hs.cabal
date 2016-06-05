@@ -1,5 +1,5 @@
 Name:                   hsx2hs
-Version:                0.13.4
+Version:                0.13.5
 License:                BSD3
 License-File:           LICENSE
 Author:                 Niklas Broberg, Joel Bjornson
@@ -10,14 +10,14 @@ Category:               Language
 Synopsis:               HSX (Haskell Source with XML) allows literal XML syntax in Haskell source code.
 Description:            HSX (Haskell Source with XML) allows literal XML syntax in Haskell source code.
 
-                        The trhsx preprocessor translates .hsx source files into ordinary .hs files. Literal
+                        The hsx2hs preprocessor translates .hsx source files into ordinary .hs files. Literal
                         XML syntax is translated into function calls for creating XML values of the appropriate
                         forms.
 
-                        trhsx transforms literal XML syntax into a series of function calls. Any project
+                        hsx2hs transforms literal XML syntax into a series of function calls. Any project
                         can make use of the syntax by providing definitions for those functions, and the
                         XML values produced will be of the types specified. This works for any types, since
-                        trhsx doesn't make any assumptions, or inserts any information depending on types.
+                        hsx2hs doesn't make any assumptions, or inserts any information depending on types.
 
                         XMLGenerator defines a few typeclasses that together cover the functions injected by the
                         preprocessor. A project that uses these classes to provide the semantics for the injected
@@ -28,8 +28,7 @@ Description:            HSX (Haskell Source with XML) allows literal XML syntax 
                         necessary machinery.
 
 Homepage:               https://github.com/seereason/hsx2hs
-
-Tested-With:            GHC==7.6.3, GHC==7.8.4, GHC==7.10.3
+Tested-With:            GHC==7.6.3, GHC==7.8.4, GHC==7.10.3, GHC==8.0.1
 Cabal-Version: 		>= 1.6
 Build-Type:             Simple
 Extra-source-files:     .travis.yml
@@ -45,7 +44,7 @@ Library
   Build-depends:	mtl              >= 2.0  && < 2.3,
                         haskell-src-exts >= 1.16 && < 1.18,
                         haskell-src-meta >= 0.6  && < 0.7,
-                        template-haskell >= 2.7  && < 2.11,
+                        template-haskell >= 2.7  && < 2.12,
                         bytestring,
                         utf8-string      >= 0.3  && < 1.1
 
