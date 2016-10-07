@@ -59,17 +59,14 @@ hsx = QuasiQuoter { quoteExp  = parseHsxExp
 parseHsxExp :: String -> ExpQ
 parseHsxExp = either (error . show) (return . toExp . transformExp) . parseHsExp
 
-parseExp :: String -> Either String Exp
+-- parseExp :: String -> Either String Exp
 parseExp = either Left (Right . toExp . transformExp) . parseHsExp
 
-parseHsExp :: String -> Either String Hs.Exp
-parseHsExp = either Left (Right . transformExp) . parseResultToEither . parseExpWithMode parseMode
+-- parseHsExp :: String -> Either String (Hs.Exp SrcSpanInfo)
+parseHsExp = either Left (Right . transformExp) . fmap (fmap $ const ()) . parseResultToEither . parseExpWithMode parseMode
 
 parseMode :: ParseMode
-parseMode = ParseMode "" Haskell2010 allExtensions False True (Just baseFixities)
-#if MIN_VERSION_haskell_src_exts(1,17,0)
-                      False
-#endif
+parseMode = ParseMode "" Haskell2010 allExtensions False True (Just baseFixities) False
 
 allExtensions :: [Extension]
 allExtensions = map EnableExtension
