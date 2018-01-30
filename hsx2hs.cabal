@@ -28,7 +28,7 @@ Description:            HSX (Haskell Source with XML) allows literal XML syntax 
                         necessary machinery.
 
 Homepage:               https://github.com/seereason/hsx2hs
-Tested-With:            GHC==7.6.3, GHC==7.8.4, GHC==7.10.3, GHC==8.0.1
+Tested-With:            GHC==7.6.3, GHC==7.8.4, GHC==7.10.3, GHC==8.0.1, GHC==8.2.2
 Cabal-Version: 		>= 1.6
 Build-Type:             Simple
 Extra-source-files:     .travis.yml
