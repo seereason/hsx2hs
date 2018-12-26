@@ -528,7 +528,11 @@ transformStmt t s = case s of
             -- their evaluation to a let-expression on the right-hand side
             ([p'], rnpss) = unzip $ renameIrrPats [p]
         -- Transform the pattern itself
-        ([p''], ags, gs, ds) <- transformPatterns [p']
+        (patts, ags, gs, ds) <- transformPatterns [p']
+        let p'' = case patts of
+              [p] -> p
+              _   -> error $ "transformDecl: expecting exactly one pattern but got: " ++ show patts
+
         -- Put the generated declarations in a let-statement
         let lt  = case ds of
                [] -> []
@@ -578,7 +582,11 @@ transformAlt (Alt l pat rhs decls) = do
     -- their evaluation to a let-expression on the right-hand side
     let ([pat'], rnpss) = unzip $ renameIrrPats [pat]
     -- Transform the pattern itself
-    ([pat''], attrGuards, guards, decls'') <- transformPatterns [pat']
+    (patts, attrGuards, guards, decls'') <- transformPatterns [pat']
+    let pat'' = case patts of
+          [p] -> p
+          _   -> error $ "transformDecl: expecting exactly one pattern but got: " ++ show patts
+
     -- Transform the right-hand side, and add any generated guards
     -- and let expressions to it.
     rhs' <- mkRhs (attrGuards ++ guards) (concat rnpss) rhs
