@@ -24,6 +24,9 @@ import Language.Haskell.Exts.Syntax
 import Language.Haskell.Exts.Build
 import Control.Applicative (Applicative(pure, (<*>)))
 import Control.Monad       (ap)
+#if MIN_VERSION_base(4,9,0)
+import qualified Control.Monad.Fail as Fail
+#endif
 import Data.List (union)
 
 import Debug.Trace (trace)
@@ -43,6 +46,13 @@ instance Monad HsxM where
  (MkHsxM f) >>= k = MkHsxM (\s -> let (a, s') = f s
                                       (MkHsxM f') = k a
                                    in f' s')
+
+#if MIN_VERSION_base(4,9,0)
+-- this is probably wrong, but should never be called anyway.
+instance Fail.MonadFail HsxM where
+    fail str = error str
+    {-# INLINE fail #-}
+#endif
 
 getHsxState :: HsxM HsxState
 getHsxState = MkHsxM (\s -> (s, s))
@@ -110,10 +120,7 @@ transformDecl d = case d of
         -- their evaluation to a let-expression on the right-hand side
         let ([pat'], rnpss) = unzip $ renameIrrPats [pat]
         -- Transform the pattern itself
-        (patts, attrGuards, guards, decls'') <- transformPatterns [pat']
-        let pat'' = case patts of
-              [p] -> p
-              _   -> error $ "transformDecl: expecting exactly one pattern but got: " ++ show patts
+        ([pat''], attrGuards, guards, decls'') <- transformPatterns [pat']
         -- Transform the right-hand side, and add any generated guards
         -- and let expressions to it
         rhs' <- mkRhs (attrGuards ++ guards) (concat rnpss) rhs
@@ -528,11 +535,7 @@ transformStmt t s = case s of
             -- their evaluation to a let-expression on the right-hand side
             ([p'], rnpss) = unzip $ renameIrrPats [p]
         -- Transform the pattern itself
-        (patts, ags, gs, ds) <- transformPatterns [p']
-        let p'' = case patts of
-              [p] -> p
-              _   -> error $ "transformDecl: expecting exactly one pattern but got: " ++ show patts
-
+        ([p''], ags, gs, ds) <- transformPatterns [p']
         -- Put the generated declarations in a let-statement
         let lt  = case ds of
                [] -> []
@@ -582,11 +585,7 @@ transformAlt (Alt l pat rhs decls) = do
     -- their evaluation to a let-expression on the right-hand side
     let ([pat'], rnpss) = unzip $ renameIrrPats [pat]
     -- Transform the pattern itself
-    (patts, attrGuards, guards, decls'') <- transformPatterns [pat']
-    let pat'' = case patts of
-          [p] -> p
-          _   -> error $ "transformDecl: expecting exactly one pattern but got: " ++ show patts
-
+    ([pat''], attrGuards, guards, decls'') <- transformPatterns [pat']
     -- Transform the right-hand side, and add any generated guards
     -- and let expressions to it.
     rhs' <- mkRhs (attrGuards ++ guards) (concat rnpss) rhs
