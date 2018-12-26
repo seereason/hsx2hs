@@ -42,7 +42,7 @@ Flag base4
 
 Library
   Build-depends:	mtl              >= 2.0  && < 2.3,
-                        haskell-src-exts >= 1.18 && < 1.22,
+                        haskell-src-exts >= 1.18 && < 1.21,
                         haskell-src-meta >= 0.7  && < 0.9,
                         template-haskell >= 2.7  && < 2.15,
                         bytestring,
