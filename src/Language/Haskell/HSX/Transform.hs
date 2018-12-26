@@ -110,7 +110,10 @@ transformDecl d = case d of
         -- their evaluation to a let-expression on the right-hand side
         let ([pat'], rnpss) = unzip $ renameIrrPats [pat]
         -- Transform the pattern itself
-        ([pat''], attrGuards, guards, decls'') <- transformPatterns [pat']
+        (patts, attrGuards, guards, decls'') <- transformPatterns [pat']
+        let pat'' = case patts of
+              [p] -> p
+              _   -> error $ "transformDecl: expecting exactly one pattern but got: " ++ show patts
         -- Transform the right-hand side, and add any generated guards
         -- and let expressions to it
         rhs' <- mkRhs (attrGuards ++ guards) (concat rnpss) rhs

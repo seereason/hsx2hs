@@ -1,5 +1,5 @@
 Name:                   hsx2hs
-Version:                0.14.1.4
+Version:                0.14.1.5
 License:                BSD3
 License-File:           LICENSE
 Author:                 Niklas Broberg, Joel Bjornson
@@ -72,3 +72,5 @@ Library
 Executable hsx2hs
   Main-Is:                hsx2hs.hs
   Hs-Source-Dirs:         src
+  Other-modules:          Language.Haskell.HSX.Transform
+                          Language.Haskell.HSX.QQ
