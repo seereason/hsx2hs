@@ -1316,9 +1316,9 @@ trRPat linear rp = case rp of
                 return (n, (v:vs), mt)
         -- We may not use an @ bind in non-linear context
         | otherwise -> case v of
-                Ident () n -> fail $ "Attempting to bind variable "++n++
+                Ident () n -> error $ "Attempting to bind variable "++n++
                       " inside the context of a numerable regular pattern"
-                _         -> fail $ "This should never ever ever happen... how the #% did you do it??!?"
+                _         -> error $ "This should never ever ever happen... how the #% did you do it??!?"
 
       where
         -- | Generate a declaration for a \@ binding.
@@ -1950,5 +1950,3 @@ metaMkName n = case n of
 --    XDomName d s -> tuple [textTypeSig $ strE d, textTypeSig $ strE s]
 --    where
 --      textTypeSig e = ExpTypeSig noLoc e (TyCon (UnQual (Ident "Text")))
-
-

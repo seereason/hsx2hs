@@ -1,5 +1,5 @@
 Name:                   hsx2hs
-Version:                0.14.1.5
+Version:                0.14.1.6
 License:                BSD3
 License-File:           LICENSE
 Author:                 Niklas Broberg, Joel Bjornson
@@ -28,7 +28,7 @@ Description:            HSX (Haskell Source with XML) allows literal XML syntax 
                         necessary machinery.
 
 Homepage:               https://github.com/seereason/hsx2hs
-Tested-With:            GHC==7.6.3, GHC==7.8.4, GHC==7.10.3, GHC==8.0.1, GHC==8.2.2, GHC==8.4.1, GHC==8.6.3
+Tested-With:            GHC==7.6.3, GHC==7.8.4, GHC==7.10.3, GHC==8.0.1, GHC==8.2.2, GHC==8.4.1, GHC==8.6.3, GHC==8.8.1
 Cabal-Version: 		>= 1.6
 Build-Type:             Simple
 Extra-source-files:     .travis.yml
@@ -42,9 +42,9 @@ Flag base4
 
 Library
   Build-depends:	mtl              >= 2.0  && < 2.3,
-                        haskell-src-exts >= 1.18 && < 1.21,
+                        haskell-src-exts >= 1.18 && < 1.23,
                         haskell-src-meta >= 0.7  && < 0.9,
-                        template-haskell >= 2.7  && < 2.15,
+                        template-haskell >= 2.7  && < 2.16,
                         bytestring,
                         utf8-string      >= 0.3  && < 1.1
 
