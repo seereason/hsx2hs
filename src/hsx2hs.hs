@@ -1,11 +1,7 @@
 {-# LANGUAGE CPP #-}
 module Main where
 
-#ifdef BASE4
-import Control.OldException           (handle,ErrorCall(..))
-#else
 import Control.Exception              (handle,ErrorCall(..))
-#endif
 import Data.List                      (isPrefixOf)
 import Prelude                        hiding (readFile, writeFile)
 import Language.Haskell.Exts          hiding (parse)
