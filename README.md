@@ -1,7 +1,6 @@
 hsx2hs
 ========
 
-[![Build Status](https://travis-ci.org/seereason/hsx2hs.svg?branch=master)](https://travis-ci.org/seereason/hsx2hs)
 [![Haskell](http://b.repl.ca/v1/language-haskell-4e6272.png)](Http://www.haskell.org)
 [![Hackage Status](https://img.shields.io/hackage/v/hsx2hs.svg)][hackage]
 
