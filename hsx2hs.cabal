@@ -70,7 +70,7 @@ Executable hsx2hs
                         mtl              >= 2.0  && < 2.4,
                         haskell-src-exts >= 1.18 && < 1.24,
                         haskell-src-meta >= 0.7  && < 0.9,
-                        template-haskell >= 2.7  && < 2.19,
+                        template-haskell >= 2.7  && < 2.20,
                         bytestring,
                         utf8-string      >= 0.3  && < 1.1
 
