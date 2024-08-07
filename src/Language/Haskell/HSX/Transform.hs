@@ -296,7 +296,7 @@ transformExpM e = case e of
     -- Escaped expressions should be treated as just expressions.
     XExpTag _ e     -> do setXmlTransformed
                           e' <- transformExpM e
-                          return $ paren $ metaAsChild e'
+                          return $ paren e'
 
     -- Patterns as arguments to a lambda expression could be regular,
     -- but we cannot put the evaluation here since a lambda expression
